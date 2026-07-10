@@ -16,6 +16,8 @@ Choose a difficulty and score as many hits as possible in two minutes. Charan, Y
 
 Successful bonks trigger a random lightweight reaction such as a shake, squish, dizzy stars, surprise flash, or pixel-particle burst. Rare **Golden Buddies** disappear faster but award 500 base points, so hit them quickly.
 
+Buddies retreat back into their holes instead of vanishing. Missed buddies may stop to taunt you first, and a small share of successful bonks reveal rare angry character reactions.
+
 Collect either of the two temporary hammer power-ups when they appear:
 
 - **Giant Hammer** makes the hammer larger and adds stronger hit particles.

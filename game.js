@@ -10,6 +10,10 @@ const GAME_CONFIG = {
   },
   reactions: ['squish', 'shake', 'dizzy', 'surprised', 'particles'],
   reactionDuration: 360,
+  retreatDuration: 320,
+  teaseDuration: 380,
+  teaseChance: 0.38,
+  angryReactionChance: 0.18,
   goldenBuddy: {
     spawnChance: 0.07,
     scoreValue: 500,
@@ -32,10 +36,15 @@ const BUDDY_HIT_RADIUS = 18;
 const GIANT_BUDDY_HIT_RADIUS = 40;
 
 const BUDDIES = [
-  { id: 'charan', sprite: 'charan-clean.png' },
-  { id: 'yesh', sprite: 'yesh-clean.png' },
-  { id: 'kiran', sprite: 'kiran.png' }
+  { id: 'charan', sprite: 'charan-clean.png', angrySprite: 'charan-angry.png' },
+  { id: 'yesh', sprite: 'yesh-clean.png', angrySprite: 'yesh-angry.png' },
+  { id: 'kiran', sprite: 'kiran.png', angrySprite: 'kiran-angry.png' }
 ];
+
+BUDDIES.forEach(({ angrySprite }) => {
+  const image = new Image();
+  image.src = `assets/${angrySprite}`;
+});
 
 const GOLDEN_BUDDY_SPAWN_CHANCE = GAME_CONFIG.goldenBuddy.spawnChance;
 const GOLDEN_BUDDY_SCORE_VALUE = GAME_CONFIG.goldenBuddy.scoreValue;
@@ -298,7 +307,7 @@ function spawnBuddy(options = {}) {
   if (isGolden) hole.classList.add('golden');
   if (options.fakeOut) hole.classList.add('fake-out');
   hole.dataset.hit = '0';
-  hole._buddy = { who, isGolden, isFakeOut: Boolean(options.fakeOut) };
+  hole._buddy = { who, angrySprite: buddy.angrySprite, isGolden, isFakeOut: Boolean(options.fakeOut) };
 
   if (isGolden) {
     addHoleBadge(hole, 'GOLD!', 'golden-badge');
@@ -318,17 +327,28 @@ function spawnBuddy(options = {}) {
 
 function expireBuddy(hole) {
   if (!hole.classList.contains('up')) return;
+  hole.classList.add('expired');
   if (hole.dataset.hit === '0' && !hole._buddy?.isFakeOut) {
     combo = 0;
     misses++;
     updateHud();
   }
-  clearHole(hole);
+  const shouldTease = hole._buddy?.isFakeOut || Math.random() < GAME_CONFIG.teaseChance;
+  if (!shouldTease) {
+    beginRetreat(hole);
+    return;
+  }
+  hole.classList.add('teasing');
+  const tease = hole._buddy?.isFakeOut
+    ? randomChoice(['PSYCH!', 'TOO SLOW!', 'GOTCHA!'])
+    : randomChoice(['MISSED ME!', 'NICE TRY!', 'TOO SLOW!']);
+  addSpeechBubble(hole, tease);
+  scheduleTimeout(() => beginRetreat(hole), GAME_CONFIG.teaseDuration);
 }
 
 function hitBuddy(hole) {
   const buddy = hole._buddy;
-  if (!buddy || buddy.isFakeOut || hole.dataset.hit === '1') return;
+  if (!buddy || buddy.isFakeOut || hole.dataset.hit === '1' || hole.classList.contains('expired')) return;
 
   hole.dataset.hit = '1';
   cancelTimeout(hole._timer);
@@ -345,12 +365,31 @@ function hitBuddy(hole) {
   score += pointsAwarded;
 
   hole.classList.add('hit');
+  const isAngryReaction = Math.random() < GAME_CONFIG.angryReactionChance;
+  if (isAngryReaction) {
+    const image = hole.querySelector('.buddy');
+    if (image) image.src = `assets/${buddy.angrySprite}`;
+    hole.classList.add('angry-reaction');
+  }
   playHitReaction(hole);
-  addSpeechBubble(hole, buddy.isGolden ? `JACKPOT +${pointsAwarded}!` : randomChoice(['OUCH!', 'OW!', 'BONK!']));
+  const reactionText = buddy.isGolden
+    ? `JACKPOT +${pointsAwarded}!`
+    : isAngryReaction
+      ? randomChoice(['HEY!', 'RUDE!', 'MY FACE!'])
+      : randomChoice(['OUCH!', 'OW!', 'BONK!']);
+  addSpeechBubble(hole, reactionText);
   bonk();
   showToast(`${buddy.isGolden ? 'GOLDEN ' : ''}${buddy.who.toUpperCase()} +${pointsAwarded}`);
   updateHud();
-  scheduleTimeout(() => clearHole(hole), GAME_CONFIG.reactionDuration);
+  scheduleTimeout(() => beginRetreat(hole), GAME_CONFIG.reactionDuration);
+}
+
+function beginRetreat(hole) {
+  if (!hole || hole.classList.contains('retreating')) return;
+  cancelTimeout(hole._timer);
+  hole.classList.remove('teasing');
+  hole.classList.add('retreating');
+  hole._timer = scheduleTimeout(() => clearHole(hole), GAME_CONFIG.retreatDuration);
 }
 
 function playHitReaction(hole) {
