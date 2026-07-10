@@ -183,6 +183,8 @@ function startGame() {
   timeLeft = GAME_CONFIG.duration;
   paused = false;
   running = true;
+  screens.game.classList.remove('mode-easy', 'mode-normal', 'mode-hard');
+  screens.game.classList.add(`mode-${level}`);
   $('#pauseModal').classList.add('hidden');
   $('#quitModal').classList.add('hidden');
   $$('.hole').forEach(clearHole);

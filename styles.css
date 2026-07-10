@@ -42,14 +42,14 @@
 .game-sky{background:linear-gradient(to bottom,#58c4cf 0 28%,#72d0d2 28% 54%,#a7d8c1 54% 76%,#eadb91 76%);image-rendering:pixelated}
 .game-sky:after{width:112px;height:112px;border-radius:0;background:var(--yellow);right:8%;top:9%;clip-path:polygon(25% 0,75% 0,75% 8%,92% 8%,92% 25%,100% 25%,100% 75%,92% 75%,92% 92%,75% 92%,75% 100%,25% 100%,25% 92%,8% 92%,8% 75%,0 75%,0 25%,8% 25%,8% 8%,25% 8%);box-shadow:0 0 0 10px rgba(255,244,163,.28)}
 .game-sky i{width:112px;height:24px;background:#fff4ca;box-shadow:24px -16px #fff4ca,48px 0 #fff4ca,16px 16px #fff4ca;clip-path:polygon(0 33%,20% 33%,20% 0,60% 0,60% 33%,100% 33%,100% 100%,0 100%)}
-.field{padding:2vh 7vw 5vh;gap:.5vh 3vw;background:linear-gradient(to bottom,rgba(255,255,255,.08),transparent 8%),repeating-linear-gradient(0deg,transparent 0 22px,rgba(23,91,50,.11) 22px 26px),repeating-linear-gradient(90deg,#61b648 0 24px,#58aa43 24px 48px,#65b94a 48px 72px);image-rendering:pixelated}
+.field{inset:25% 0 0;padding:1vh 7vw 3vh;gap:.2vh 3vw;background:linear-gradient(to bottom,rgba(255,255,255,.08),transparent 8%),repeating-linear-gradient(0deg,transparent 0 22px,rgba(23,91,50,.11) 22px 26px),repeating-linear-gradient(90deg,#61b648 0 24px,#58aa43 24px 48px,#65b94a 48px 72px);image-rendering:pixelated}
 .grass-front{background:repeating-linear-gradient(90deg,#23683a 0 10px,#327c3d 10px 20px,#3f9142 20px 30px,#286f38 30px 40px);clip-path:polygon(0 18%,2% 18%,2% 0,4% 0,4% 28%,7% 28%,7% 8%,9% 8%,9% 34%,12% 34%,12% 0,14% 0,14% 25%,17% 25%,17% 10%,19% 10%,19% 30%,22% 30%,22% 4%,24% 4%,24% 28%,27% 28%,27% 12%,29% 12%,29% 34%,32% 34%,32% 0,34% 0,34% 26%,37% 26%,37% 7%,39% 7%,39% 31%,42% 31%,42% 2%,44% 2%,44% 25%,47% 25%,47% 11%,49% 11%,49% 33%,52% 33%,52% 5%,54% 5%,54% 27%,57% 27%,57% 0,59% 0,59% 31%,62% 31%,62% 9%,64% 9%,64% 26%,67% 26%,67% 3%,69% 3%,69% 34%,72% 34%,72% 13%,74% 13%,74% 28%,77% 28%,77% 0,79% 0,79% 30%,82% 30%,82% 8%,84% 8%,84% 25%,87% 25%,87% 4%,89% 4%,89% 34%,92% 34%,92% 12%,94% 12%,94% 27%,97% 27%,97% 2%,99% 2%,99% 20%,100% 20%,100% 100%,0 100%)}
 
 .hole{overflow:visible;isolation:isolate;image-rendering:pixelated}
 .hole:before,.hole.golden:before,.hole.fake-out:before{content:"";position:absolute;z-index:1;left:5%;top:auto;bottom:2%;width:90%;height:27%;background:#211522;border:0;clip-path:polygon(14% 0,86% 0,86% 8%,95% 8%,95% 20%,100% 20%,100% 72%,94% 72%,94% 86%,82% 86%,82% 100%,18% 100%,18% 92%,7% 92%,7% 80%,0 80%,0 28%,6% 28%,6% 14%,14% 14%);box-shadow:none;animation:none;transform:none;pointer-events:none}
 .hole:after{content:"";position:absolute;z-index:4;left:3%;bottom:0;width:94%;height:17%;background:#71462f;border:0;border-radius:0;clip-path:polygon(0 0,9% 0,9% 13%,20% 13%,20% 25%,80% 25%,80% 13%,91% 13%,91% 0,100% 0,100% 70%,93% 70%,93% 86%,82% 86%,82% 100%,18% 100%,18% 88%,7% 88%,7% 72%,0 72%);box-shadow:inset 0 -7px #4d3127,0 7px #2d7039;pointer-events:none}
 .buddy-stage{position:absolute;z-index:2;inset:-8% 0 5%;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;pointer-events:none}
-.buddy{position:absolute;z-index:2;left:auto;width:min(16vw,160px);height:100%;max-width:100%;max-height:100%;object-fit:contain;object-position:center bottom;bottom:-105%;transition:bottom .3s steps(6,end);will-change:bottom,transform}
+.buddy{position:absolute;z-index:2;left:auto;width:min(18vw,180px);height:100%;max-width:100%;max-height:100%;object-fit:contain;object-position:center bottom;bottom:-105%;transition:bottom .3s steps(6,end);will-change:bottom,transform}
 .hole.up .buddy{bottom:-1%}
 .hole.hit .buddy{transition:none}
 .hole-badge{position:absolute;z-index:9;left:50%;top:1%;transform:translateX(-50%);pointer-events:none}.golden-badge{color:#fff4a3;font-size:8px;text-shadow:2px 2px #a34917;animation:gold-label .35s steps(2,end) infinite alternate}.fake-badge{color:#fff;font-size:16px;text-shadow:3px 3px var(--purple);animation:pop .22s both}
@@ -58,16 +58,36 @@
 .powerup:before,.powerup:after{content:"";position:absolute;background:inherit;z-index:-1}.powerup:before{inset:-10px 10px}.powerup:after{inset:10px -10px}
 .powerup-golden{box-shadow:7px 7px 0 var(--ink),0 0 0 6px #ff9f2f;animation:pixel-float .7s steps(2,end) infinite alternate,gold-pulse .35s steps(2,end) infinite alternate}
 
-.hammer{width:96px;height:112px;margin-left:-75px;margin-top:-28px;transform-origin:52px 105px;transform:rotate(-35deg);image-rendering:pixelated}
+.hammer{width:96px;height:112px;margin-left:20px;margin-top:-69px;transform-origin:52px 105px;transform:rotate(0);image-rendering:pixelated}
 .hammer-head{width:72px;height:42px;left:4px;top:4px;border:6px solid #252037;border-radius:0;background:linear-gradient(to bottom,#f7f0d7 0 24%,#d5d0c8 24% 72%,#aaa4a7 72%);clip-path:polygon(8% 0,92% 0,92% 10%,100% 10%,100% 90%,92% 90%,92% 100%,8% 100%,8% 90%,0 90%,0 10%,8% 10%);box-shadow:6px 6px 0 #6f5571}
 .hammer-head:after{width:18px;height:45px;right:-19px;top:-7px;border-radius:0;box-shadow:4px 4px 0 #6f5571}
 .handle{width:20px;height:76px;left:42px;top:38px;border-radius:0;background:linear-gradient(90deg,#7f382c 0 28%,#d57a3e 28% 68%,#9d4932 68%);box-shadow:5px 5px 0 #4c2730;transform:rotate(-8deg)}
 .hammer.swing{animation:pixel-swing .18s steps(4,end)}
-.giant-hammer-active .hammer{margin-left:-88px;margin-top:15px;transform:rotate(-35deg) scale(1.55);filter:drop-shadow(0 0 8px #fff2c6)}
+.giant-hammer-active .hammer{margin-left:60px;margin-top:-49px;transform:rotate(0) scale(1.55);filter:drop-shadow(0 0 8px #fff2c6)}
 .giant-hammer-active .hammer.swing{animation:giant-pixel-swing .2s steps(4,end)}
 
 @keyframes pixel-float{to{transform:translateY(-10px)}}
-@keyframes pixel-swing{0%{transform:rotate(-35deg)}50%{transform:rotate(25deg)}100%{transform:rotate(-35deg)}}
-@keyframes giant-pixel-swing{0%{transform:rotate(-35deg) scale(1.55)}50%{transform:rotate(25deg) scale(1.55)}100%{transform:rotate(-35deg) scale(1.55)}}
+@keyframes pixel-swing{0%{transform:rotate(0)}50%{transform:rotate(-55deg)}100%{transform:rotate(0)}}
+@keyframes giant-pixel-swing{0%{transform:rotate(0) scale(1.55)}50%{transform:rotate(-55deg) scale(1.55)}100%{transform:rotate(0) scale(1.55)}}
 
-@media(max-width:700px){.field{padding:2vh 2vw 5vh;gap:.5vh 2vw}.buddy-stage{inset:-5% 0 5%}.buddy{width:100%;height:100%}.hole:before,.hole.golden:before,.hole.fake-out:before{height:23%}.hole:after{height:14%}.powerup{width:54px;height:54px}}
+@media(max-width:700px){.field{inset:23% 0 0;padding:1vh 2vw 3vh;gap:.2vh 2vw}.buddy-stage{inset:-5% 0 5%}.buddy{width:100%;height:100%}.hole:before,.hole.golden:before,.hole.fake-out:before{height:23%}.hole:after{height:14%}.powerup{width:54px;height:54px}}
+
+/* Difficulty worlds: cheerful skies, spicy sunset, and an infernal final stage. */
+.mode-easy .game-sky{background:linear-gradient(#5fd8ff 0 48%,#bff4ff 48% 72%,#f8ef9d 72%)}
+.mode-easy .game-sky:before{content:"";position:absolute;z-index:0;left:5%;top:8%;width:170px;height:88px;border-radius:100px 100px 0 0;background:radial-gradient(ellipse at center bottom,transparent 0 28%,#8664d8 29% 36%,#4d9ff0 37% 44%,#59cf75 45% 52%,#ffd84b 53% 60%,#ff8b45 61% 68%,#ed527d 69% 76%,transparent 77%);image-rendering:pixelated}
+.mode-easy .field{background:repeating-linear-gradient(0deg,transparent 0 28px,rgba(255,255,255,.09) 28px 32px),repeating-linear-gradient(90deg,#68c94f 0 24px,#78d85b 24px 48px,#59b947 48px 72px)}
+.mode-easy .grass-front{background:repeating-linear-gradient(90deg,#2f873d 0 10px,#48a94a 10px 20px,#68c853 20px 30px)}
+
+.mode-normal .game-sky{background:linear-gradient(#55256f 0 18%,#c33d66 18% 45%,#ff7c38 45% 70%,#ffc24b 70%)}
+.mode-normal .game-sky:before{content:"";position:absolute;left:8%;bottom:-8%;width:38%;height:46%;background:#40234f;clip-path:polygon(0 100%,18% 58%,29% 70%,48% 12%,63% 62%,78% 42%,100% 100%);box-shadow:380px 20px #572448}
+.mode-normal .game-sky:after{background:#ffcf45;box-shadow:0 0 0 10px rgba(255,89,42,.25),0 0 0 22px rgba(255,89,42,.12)}
+.mode-normal .field{background:repeating-linear-gradient(0deg,transparent 0 24px,rgba(101,30,48,.14) 24px 28px),repeating-linear-gradient(90deg,#a85a39 0 24px,#bd6b3d 24px 48px,#914b37 48px 72px)}
+.mode-normal .grass-front{background:repeating-linear-gradient(90deg,#71352f 0 10px,#94432f 10px 20px,#bd6339 20px 30px)}
+
+.mode-hard .game-sky{background:linear-gradient(#12091d 0 30%,#351128 30% 52%,#741b2b 52% 74%,#d34227 74%)}
+.mode-hard .game-sky:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 42px,rgba(255,59,32,.16) 43px 47px,transparent 48px 84px)}
+.mode-hard .game-sky:after{background:#ed3b24;box-shadow:0 0 0 10px rgba(111,10,20,.65),0 0 0 22px rgba(255,61,26,.15)}
+.mode-hard .game-sky i{background:#2c1327;box-shadow:24px -16px #2c1327,48px 0 #2c1327,16px 16px #2c1327}
+.mode-hard .field{background:linear-gradient(rgba(255,54,26,.08),transparent 12%),repeating-linear-gradient(135deg,#271523 0 22px,#3b1821 22px 42px,#571c21 42px 48px)}
+.mode-hard .grass-front{background:repeating-linear-gradient(90deg,#160e1a 0 10px,#35131e 10px 20px,#681d25 20px 30px)}
+.mode-hard .hole:after{background:#511b1d;box-shadow:inset 0 -7px #2b1018,0 7px #7d211f}
