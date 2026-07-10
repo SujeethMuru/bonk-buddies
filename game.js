@@ -4,13 +4,12 @@ const $$ = selector => [...document.querySelectorAll(selector)];
 const GAME_CONFIG = {
   duration: 120000,
   difficulties: {
-    easy: { visibleDuration: 1250, spawnGap: 800, maxVisible: 2 },
-    normal: { visibleDuration: 900, spawnGap: 560, maxVisible: 3 },
-    hard: { visibleDuration: 620, spawnGap: 350, maxVisible: 4 }
+    easy: { visibleDuration: 1250, spawnGap: 800, maxVisible: 2, specialPatternChance: 0.18 },
+    normal: { visibleDuration: 1050, spawnGap: 650, maxVisible: 3, specialPatternChance: 0.24 },
+    hard: { visibleDuration: 620, spawnGap: 350, maxVisible: 4, specialPatternChance: 0.32 }
   },
   reactions: ['squish', 'shake', 'dizzy', 'surprised', 'particles'],
   reactionDuration: 360,
-  specialPatternChance: 0.32,
   goldenBuddy: {
     spawnChance: 0.07,
     scoreValue: 500,
@@ -26,6 +25,12 @@ const GAME_CONFIG = {
     golden: { label: 'GOLDEN HAMMER', icon: '✨', duration: 9000, scoreMultiplier: 2 }
   }
 };
+
+const BUDDIES = [
+  { id: 'charan', sprite: 'charan-clean.png' },
+  { id: 'yesh', sprite: 'yesh-clean.png' },
+  { id: 'kiran', sprite: 'kiran.png' }
+];
 
 const GOLDEN_BUDDY_SPAWN_CHANCE = GAME_CONFIG.goldenBuddy.spawnChance;
 const GOLDEN_BUDDY_SCORE_VALUE = GAME_CONFIG.goldenBuddy.scoreValue;
@@ -220,7 +225,8 @@ const SPAWN_PATTERNS = {
 };
 
 function runSelectedPattern() {
-  if (Math.random() >= GAME_CONFIG.specialPatternChance) return SPAWN_PATTERNS.standard();
+  const settings = GAME_CONFIG.difficulties[level];
+  if (Math.random() >= settings.specialPatternChance) return SPAWN_PATTERNS.standard();
   const patternNames = ['leftToRight', 'rightToLeft', 'double', 'triple', 'speedBurst', 'fakeOut'];
   const eligiblePatterns = patternNames.filter(name => name !== lastSpecialPattern);
   const selectedName = randomChoice(eligiblePatterns);
@@ -245,11 +251,12 @@ function spawnBuddy(options = {}) {
     : field.querySelector(`.hole[data-index="${options.holeIndex}"]:not(.up)`);
   if (!hole) hole = openHoles[Math.floor(Math.random() * openHoles.length)];
 
-  const who = Math.random() < 0.5 ? 'charan' : 'yesh';
+  const buddy = randomChoice(BUDDIES);
+  const who = buddy.id;
   const isGolden = !options.fakeOut && Math.random() < GOLDEN_BUDDY_SPAWN_CHANCE;
   const image = new Image();
   image.className = 'buddy';
-  image.src = `assets/${who}.png`;
+  image.src = `assets/${buddy.sprite}`;
   image.alt = `${isGolden ? 'Golden ' : ''}${who}`;
 
   clearHole(hole);

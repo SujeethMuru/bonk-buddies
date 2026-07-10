@@ -12,7 +12,7 @@ python -m http.server 8000
 
 Then visit `http://localhost:8000`.
 
-Choose a difficulty and score as many hits as possible in two minutes. Buddies can arrive randomly or in short sequences, doubles, triples, speed bursts, and harmless fake-outs.
+Choose a difficulty and score as many hits as possible in two minutes. Charan, Yesh, and Kiran can arrive randomly or in short sequences, doubles, triples, speed bursts, and harmless fake-outs.
 
 Successful bonks trigger a random lightweight reaction such as a shake, squish, dizzy stars, surprise flash, or pixel-particle burst. Rare **Golden Buddies** disappear faster but award 500 base points, so hit them quickly.
 
