@@ -41,12 +41,19 @@ const BUDDIES = [
   { id: 'charan', sprite: 'charan-clean.png', angrySprite: 'charan-angry.png' },
   { id: 'yesh', sprite: 'yesh-clean.png', angrySprite: 'yesh-angry.png' },
   { id: 'kiran', sprite: 'kiran.png', angrySprite: 'kiran-angry.png' },
-  { id: 'vaibhav', sprite: 'vaibhav.png', angrySprite: 'vaibhav-angry.png' }
+  { id: 'vaibhav', sprite: 'vaibhav.png', angrySprite: 'vaibhav-angry.png' },
+  { id: 'anand', sprite: 'anand.jpg' },
+  { id: 'henry', sprite: 'henry.jpg' },
+  { id: 'hozaif', sprite: 'hozaif.jpg' },
+  { id: 'johannes', sprite: 'johannes.jpg' },
+  { id: 'leyneesh', sprite: 'leyneesh.jpg' },
+  { id: 'mukesh', sprite: 'mukesh.jpg' },
+  { id: 'rohan', sprite: 'rohan.jpg' }
 ];
 
-BUDDIES.forEach(({ angrySprite }) => {
+BUDDIES.forEach(({ sprite, angrySprite }) => {
   const image = new Image();
-  image.src = `assets/${angrySprite}`;
+  image.src = `assets/${angrySprite || sprite}`;
 });
 
 const GOLDEN_BUDDY_SPAWN_CHANCE = GAME_CONFIG.goldenBuddy.spawnChance;
@@ -68,7 +75,7 @@ let hits = 0;
 let misses = 0;
 let combo = 0;
 let bestCombo = 0;
-let friendHits = { charan: 0, yesh: 0, kiran: 0, vaibhav: 0 };
+let friendHits = Object.fromEntries(BUDDIES.map(({ id }) => [id, 0]));
 let timeLeft = GAME_CONFIG.duration;
 let clockTimer = null;
 let powerTimer = null;
@@ -201,7 +208,7 @@ function startGame() {
   misses = 0;
   combo = 0;
   bestCombo = 0;
-  friendHits = { charan: 0, yesh: 0, kiran: 0, vaibhav: 0 };
+  friendHits = Object.fromEntries(BUDDIES.map(({ id }) => [id, 0]));
   lastSpecialPattern = '';
   pausedPower = null;
   timeLeft = selectedDuration;
@@ -382,7 +389,7 @@ function hitBuddy(hole) {
   score += pointsAwarded;
 
   hole.classList.add('hit');
-  const isAngryReaction = Math.random() < GAME_CONFIG.angryReactionChance;
+  const isAngryReaction = buddy.angrySprite && Math.random() < GAME_CONFIG.angryReactionChance;
   if (isAngryReaction) {
     const image = hole.querySelector('.buddy');
     if (image) image.src = `assets/${buddy.angrySprite}`;
