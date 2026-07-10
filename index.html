@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bonk Buddies!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="scanlines"></div>
+  <main class="cabinet">
+    <header class="topbar">
+      <div class="brand"><span class="logo-hammer">🔨</span><span>BONK<br><b>BUDDIES!</b></span></div>
+      <div class="hud hidden" id="hud">
+        <div class="stat"><small>SCORE</small><strong id="score">0000</strong></div>
+        <div class="stat timer-stat"><small>TIME</small><strong id="timer">02:00</strong></div>
+        <div class="stat"><small>COMBO</small><strong id="combo">x1</strong></div>
+      </div>
+      <button id="soundBtn" class="sound-btn" aria-label="Toggle sound">♫ ON</button>
+    </header>
+
+    <section id="menu" class="screen menu-screen">
+      <div class="sun"></div><div class="mountains"></div>
+      <div class="menu-card">
+        <p class="eyebrow">★ INSERT FUN ★</p>
+        <h1>WHACK<br><span>A BUDDY</span></h1>
+        <p class="subtitle">CHARAN & YESH EDITION</p>
+        <div class="preview-duo">
+          <img class="keyed" src="assets/charan-key.png" alt="Pixel Charan" />
+          <div class="versus">VS</div>
+          <img class="keyed" src="assets/yesh-key.png" alt="Pixel Yesh" />
+        </div>
+        <p class="choose">CHOOSE YOUR CHAOS</p>
+        <div class="difficulty" role="group" aria-label="Difficulty">
+          <button data-level="easy"><span>CHILL</span><small>Slow & steady</small></button>
+          <button data-level="normal" class="selected"><span>SPICY</span><small>Classic chaos</small></button>
+          <button data-level="hard"><span>UNHINGED</span><small>Blink & miss</small></button>
+        </div>
+        <button id="startBtn" class="start-btn">PRESS START <i>▶</i></button>
+        <p class="how">WHACK BUDDIES • GRAB POWER-UPS • SCORE BIG</p>
+      </div>
+    </section>
+
+    <section id="game" class="screen game-screen hidden">
+      <div class="game-sky"><i></i><i></i><i></i></div>
+      <div class="powerbar">
+        <span>POWER-UP</span>
+        <div id="powerStatus" class="power-status">NONE</div>
+      </div>
+      <button id="quitBtn" class="quit-btn">■ QUIT</button>
+      <div id="field" class="field" aria-label="Game field"></div>
+      <div class="grass-front"></div>
+      <div id="toast" class="toast"></div>
+      <div id="hammer" class="hammer" aria-hidden="true"><div class="hammer-head"></div><div class="handle"></div></div>
+      <div id="quitModal" class="quit-modal hidden" role="dialog" aria-modal="true" aria-labelledby="quitTitle">
+        <div class="quit-card"><h2 id="quitTitle">QUIT GAME?</h2><p>Your score will be lost!</p><div><button id="keepPlaying">KEEP BONKING</button><button id="confirmQuit">QUIT</button></div></div>
+      </div>
+    </section>
+
+    <section id="results" class="screen results-screen hidden">
+      <div class="result-card">
+        <p class="eyebrow">★ TIME'S UP! ★</p>
+        <h2>BONK<br>REPORT</h2>
+        <div class="final-score"><small>FINAL SCORE</small><strong id="finalScore">0000</strong></div>
+        <div class="result-grid">
+          <div><small>HITS</small><b id="finalHits">0</b></div>
+          <div><small>BEST COMBO</small><b id="finalCombo">x0</b></div>
+          <div><small>ACCURACY</small><b id="finalAccuracy">0%</b></div>
+        </div>
+        <p id="rank" class="rank">ROOKIE BONKER</p>
+        <button id="againBtn" class="start-btn">BONK AGAIN <i>↻</i></button>
+        <button id="menuBtn" class="text-btn">CHANGE DIFFICULTY</button>
+      </div>
+    </section>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>

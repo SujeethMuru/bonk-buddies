@@ -1,0 +1,7 @@
+# Keep the original reference portraits local. The game uses pixel-art derivatives.
+Charan.png
+Yesh.png
+
+# Local tooling
+.DS_Store
+Thumbs.db
