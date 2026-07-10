@@ -26,6 +26,8 @@ const GAME_CONFIG = {
     pointerHitRadius: 44,
     giantPointerHitRadius: 78,
     giant: { label: 'GIANT HAMMER', icon: '🔨', duration: 9000 },
+    lightning: { label: 'LIGHTNING HAMMER', icon: '⚡', instant: true },
+    freeze: { label: 'FREEZE TIME', icon: '❄', duration: 9000, timeScale: 0.35 },
     golden: { label: 'GOLDEN ×2', icon: '×2', duration: 9000, scoreMultiplier: 2 },
     silver: { label: 'SILVER ×1.5', icon: '×1.5', duration: 8000, scoreMultiplier: 1.5 },
     ruby: { label: 'RUBY ×3', icon: '×3', duration: 6500, scoreMultiplier: 3 }
@@ -84,6 +86,14 @@ let audioCtx;
 let activePower = null;
 let pausedPower = null;
 let lastSpecialPattern = '';
+
+function worldTimeScale() {
+  return activePower?.id === 'freeze' ? GAME_CONFIG.powerups.freeze.timeScale : 1;
+}
+
+function worldDelay(delay) {
+  return delay / worldTimeScale();
+}
 
 function scheduleTimeout(callback, delay) {
   const timer = setTimeout(() => {
@@ -241,7 +251,7 @@ function quitGame() {
 function scheduleNextPattern(extraDelay = 0) {
   if (!running) return;
   const settings = GAME_CONFIG.difficulties[level];
-  const delay = extraDelay + settings.spawnGap * (0.78 + Math.random() * 0.42);
+  const delay = worldDelay(extraDelay + settings.spawnGap * (0.78 + Math.random() * 0.42));
   scheduleTimeout(() => {
     const patternDuration = runSelectedPattern();
     scheduleNextPattern(patternDuration);
@@ -341,7 +351,7 @@ function spawnBuddy(options = {}) {
 
   const baseDuration = isGolden ? GOLDEN_BUDDY_VISIBLE_DURATION : settings.visibleDuration;
   const visibleDuration = options.fakeOut ? 260 : baseDuration * (options.durationScale || 1);
-  hole._timer = scheduleTimeout(() => expireBuddy(hole), visibleDuration);
+  hole._timer = scheduleTimeout(() => expireBuddy(hole), worldDelay(visibleDuration));
   return true;
 }
 
@@ -357,7 +367,7 @@ function expireBuddy(hole) {
     ? randomChoice(['PSYCH!', 'TOO SLOW!', 'GOTCHA!'])
     : randomChoice(['MISSED ME!', 'NICE TRY!', 'TOO SLOW!']);
   addSpeechBubble(hole, tease);
-  hole._timer = scheduleTimeout(() => beginRetreat(hole), GAME_CONFIG.teaseDuration);
+  hole._timer = scheduleTimeout(() => beginRetreat(hole), worldDelay(GAME_CONFIG.teaseDuration));
 }
 
 function hitBuddy(hole) {
@@ -397,7 +407,7 @@ function hitBuddy(hole) {
   bonk();
   showToast(`${buddy.isGolden ? 'GOLDEN ' : ''}${buddy.who.toUpperCase()} +${pointsAwarded}`);
   updateHud();
-  scheduleTimeout(() => beginRetreat(hole), GAME_CONFIG.reactionDuration);
+  scheduleTimeout(() => beginRetreat(hole), worldDelay(GAME_CONFIG.reactionDuration));
 }
 
 function beginRetreat(hole) {
@@ -405,7 +415,7 @@ function beginRetreat(hole) {
   cancelTimeout(hole._timer);
   hole.classList.remove('teasing');
   hole.classList.add('retreating');
-  hole._timer = scheduleTimeout(() => finishRetreat(hole), GAME_CONFIG.retreatDuration);
+  hole._timer = scheduleTimeout(() => finishRetreat(hole), worldDelay(GAME_CONFIG.retreatDuration));
 }
 
 function finishRetreat(hole) {
@@ -480,7 +490,7 @@ function clearHole(hole) {
 
 function tick() {
   const now = performance.now();
-  timeLeft -= now - lastTick;
+  timeLeft -= (now - lastTick) * worldTimeScale();
   lastTick = now;
   updateActivePower(now);
   if (timeLeft <= 0) {
@@ -500,7 +510,12 @@ function updateHud() {
 function trySpawnPowerup() {
   if (!running || $('.powerup') || Math.random() > GAME_CONFIG.powerups.appearanceChance) return;
   const roll = Math.random();
-  const powerId = roll < 0.35 ? 'giant' : roll < 0.65 ? 'golden' : roll < 0.88 ? 'silver' : 'ruby';
+  const powerId = roll < 0.22 ? 'giant'
+    : roll < 0.4 ? 'golden'
+      : roll < 0.55 ? 'silver'
+        : roll < 0.67 ? 'ruby'
+          : roll < 0.83 ? 'lightning'
+            : 'freeze';
   const config = GAME_CONFIG.powerups[powerId];
   const collectible = document.createElement('button');
   collectible.className = `powerup powerup-${powerId}`;
@@ -538,11 +553,18 @@ function collectNearbyPowerup(pointerX, pointerY) {
 }
 
 function activatePowerup(powerId) {
+  if (powerId === 'lightning') {
+    activateLightningHammer();
+    return;
+  }
   clearActivePower();
   const config = GAME_CONFIG.powerups[powerId];
   activePower = { id: powerId, expiresAt: performance.now() + config.duration };
   screens.game.classList.toggle('giant-hammer-active', powerId === 'giant');
+  screens.game.classList.toggle('freeze-time-active', powerId === 'freeze');
+  if (powerId === 'freeze') slowVisibleBuddies();
   powerSound();
+  startMusic();
   updateActivePower(performance.now());
   showToast(`${config.label}!`);
 }
@@ -562,9 +584,47 @@ function updateActivePower(now) {
 }
 
 function clearActivePower() {
+  const wasFreeze = activePower?.id === 'freeze';
   activePower = null;
-  screens.game.classList.remove('giant-hammer-active');
+  screens.game.classList.remove('giant-hammer-active', 'freeze-time-active');
   $('#powerStatus').textContent = 'NONE';
+  if (wasFreeze && running) startMusic();
+}
+
+function activateLightningHammer() {
+  const targets = $$('.hole.up').filter(hole => hole._buddy && !hole._buddy.isFakeOut && hole.dataset.hit === '0');
+  showLightningStorm();
+  lightningSound();
+  targets.forEach(hitBuddy);
+  showToast(targets.length ? `LIGHTNING BONK x${targets.length}!` : 'LIGHTNING STRIKE!');
+}
+
+function showLightningStorm() {
+  $('.lightning-storm')?.remove();
+  const storm = document.createElement('div');
+  storm.className = 'lightning-storm';
+  for (let index = 0; index < 9; index++) {
+    const bolt = document.createElement('i');
+    bolt.style.setProperty('--bolt-x', `${5 + Math.random() * 90}%`);
+    bolt.style.setProperty('--bolt-delay', `${Math.random() * 0.18}s`);
+    bolt.style.setProperty('--bolt-tilt', `${-18 + Math.random() * 36}deg`);
+    storm.appendChild(bolt);
+  }
+  screens.game.appendChild(storm);
+  scheduleTimeout(() => storm.remove(), 800);
+}
+
+function slowVisibleBuddies() {
+  $$('.hole.up').forEach(hole => {
+    cancelTimeout(hole._timer);
+    const retreating = hole.classList.contains('retreating');
+    const teasing = hole.classList.contains('teasing');
+    const delay = retreating ? GAME_CONFIG.retreatDuration
+      : teasing ? GAME_CONFIG.teaseDuration
+        : GAME_CONFIG.difficulties[level].visibleDuration;
+    const callback = retreating ? finishRetreat : teasing ? beginRetreat : expireBuddy;
+    hole._timer = scheduleTimeout(() => callback(hole), worldDelay(delay));
+  });
 }
 
 function removePowerupCollectible() {
@@ -600,6 +660,7 @@ function resumeGame() {
   if (pausedPower?.remaining > 0) {
     activePower = { id: pausedPower.id, expiresAt: performance.now() + pausedPower.remaining };
     screens.game.classList.toggle('giant-hammer-active', activePower.id === 'giant');
+    screens.game.classList.toggle('freeze-time-active', activePower.id === 'freeze');
     pausedPower = null;
     updateActivePower(performance.now());
   }
@@ -670,6 +731,10 @@ function initAudio() {
 
 function tone(frequency, duration, type = 'square', volume = 0.035, when = 0) {
   if (!audioOn || !audioCtx) return;
+  const scale = worldTimeScale();
+  frequency *= scale;
+  duration /= scale;
+  when /= scale;
   const oscillator = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   oscillator.type = type;
@@ -697,6 +762,11 @@ function powerSound() {
   [300, 450, 650, 900].forEach((frequency, index) => tone(frequency, 0.13, 'square', 0.04, index * 0.07));
 }
 
+function lightningSound() {
+  initAudio();
+  [980, 720, 1120, 540].forEach((frequency, index) => tone(frequency, 0.09, 'sawtooth', 0.055, index * 0.045));
+}
+
 function victorySound() {
   initAudio();
   [262, 330, 392, 523].forEach((frequency, index) => tone(frequency, 0.25, 'square', 0.05, index * 0.12));
@@ -706,11 +776,12 @@ function startMusic() {
   if (!audioOn || !running) return;
   stopMusic();
   let index = 0;
+  const scale = worldTimeScale();
   const notes = [131, 165, 196, 165, 147, 185, 220, 185, 131, 165, 247, 196, 147, 185, 220, 294];
   musicTimer = setInterval(() => {
     tone(notes[index++ % notes.length], 0.11, 'square', 0.018);
     if (index % 4 === 0) tone(65, 0.08, 'triangle', 0.025);
-  }, 140);
+  }, 140 / scale);
 }
 
 function stopMusic() {
