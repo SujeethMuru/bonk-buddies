@@ -20,11 +20,15 @@ const GAME_CONFIG = {
     appearanceChance: 0.48,
     collectibleDuration: 5000,
     pointerHitRadius: 44,
-    giantPointerHitRadius: 64,
+    giantPointerHitRadius: 78,
     giant: { label: 'GIANT HAMMER', icon: '🔨', duration: 9000 },
     golden: { label: 'GOLDEN HAMMER', icon: '✨', duration: 9000, scoreMultiplier: 2 }
   }
 };
+
+const HAMMER_IMPACT_DELAY = 70;
+const BUDDY_HIT_RADIUS = 18;
+const GIANT_BUDDY_HIT_RADIUS = 40;
 
 const BUDDIES = [
   { id: 'charan', sprite: 'charan-clean.png' },
@@ -113,25 +117,48 @@ document.addEventListener('pointermove', event => {
 });
 
 document.addEventListener('pointerdown', event => {
-  collectNearbyPowerup(event.clientX, event.clientY);
   hammer.classList.remove('swing');
   void hammer.offsetWidth;
   hammer.classList.add('swing');
+  if (!running || !screens.game.contains(event.target) || event.target.closest('.game-controls, .quit-modal')) return;
+  const strikeX = event.clientX;
+  const strikeY = event.clientY;
+  scheduleTimeout(() => performHammerStrike(strikeX, strikeY), HAMMER_IMPACT_DELAY);
 });
 
-field.addEventListener('pointerdown', event => {
+function performHammerStrike(strikeX, strikeY) {
   if (!running) return;
-  const hole = event.target.closest('.hole');
-  if (!hole) return;
-  if (hole.classList.contains('up')) {
+  const collectedPowerup = collectNearbyPowerup(strikeX, strikeY);
+  const hitRadius = activePower?.id === 'giant' ? GIANT_BUDDY_HIT_RADIUS : BUDDY_HIT_RADIUS;
+  const hole = findBuddyAtStrike(strikeX, strikeY, hitRadius);
+  if (hole) {
     hitBuddy(hole);
     return;
   }
+  const fieldBounds = field.getBoundingClientRect();
+  if (collectedPowerup || !pointInsideRect(strikeX, strikeY, fieldBounds)) return;
   misses++;
   combo = 0;
   updateHud();
   blip(100, 0.04);
-});
+}
+
+function findBuddyAtStrike(strikeX, strikeY, hitRadius) {
+  return $$('.hole.up').find(hole => {
+    const buddy = hole.querySelector('.buddy');
+    return buddy && distanceToRect(strikeX, strikeY, buddy.getBoundingClientRect()) <= hitRadius;
+  });
+}
+
+function pointInsideRect(x, y, rect) {
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+function distanceToRect(x, y, rect) {
+  const nearestX = Math.max(rect.left, Math.min(x, rect.right));
+  const nearestY = Math.max(rect.top, Math.min(y, rect.bottom));
+  return Math.hypot(x - nearestX, y - nearestY);
+}
 
 function showScreen(name) {
   Object.values(screens).forEach(screen => screen.classList.add('hidden'));
@@ -415,10 +442,6 @@ function trySpawnPowerup() {
   collectible.style.top = `${38 + Math.random() * 42}%`;
   collectible.dataset.powerId = powerId;
   screens.game.appendChild(collectible);
-  collectible.addEventListener('pointerdown', event => {
-    event.stopPropagation();
-    collectPowerup(collectible);
-  });
   collectible._timer = scheduleTimeout(() => collectible.remove(), GAME_CONFIG.powerups.collectibleDuration);
 }
 
@@ -431,17 +454,17 @@ function collectPowerup(collectible) {
 }
 
 function collectNearbyPowerup(pointerX, pointerY) {
-  if (!running) return;
+  if (!running) return false;
   const collectible = $('.powerup');
-  if (!collectible) return;
+  if (!collectible) return false;
   const bounds = collectible.getBoundingClientRect();
-  const nearestX = Math.max(bounds.left, Math.min(pointerX, bounds.right));
-  const nearestY = Math.max(bounds.top, Math.min(pointerY, bounds.bottom));
-  const distance = Math.hypot(pointerX - nearestX, pointerY - nearestY);
+  const distance = distanceToRect(pointerX, pointerY, bounds);
   const hitRadius = activePower?.id === 'giant'
     ? GAME_CONFIG.powerups.giantPointerHitRadius
     : GAME_CONFIG.powerups.pointerHitRadius;
-  if (distance <= hitRadius) collectPowerup(collectible);
+  if (distance > hitRadius) return false;
+  collectPowerup(collectible);
+  return true;
 }
 
 function activatePowerup(powerId) {
