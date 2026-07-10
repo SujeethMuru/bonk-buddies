@@ -27,6 +27,7 @@ const GAME_CONFIG = {
 };
 
 const HAMMER_IMPACT_DELAY = 90;
+const GIANT_HAMMER_IMPACT_DELAY = 100;
 const BUDDY_HIT_RADIUS = 18;
 const GIANT_BUDDY_HIT_RADIUS = 40;
 
@@ -123,7 +124,8 @@ document.addEventListener('pointerdown', event => {
   if (!running || !screens.game.contains(event.target) || event.target.closest('.game-controls, .quit-modal')) return;
   const strikeX = event.clientX;
   const strikeY = event.clientY;
-  scheduleTimeout(() => performHammerStrike(strikeX, strikeY), HAMMER_IMPACT_DELAY);
+  const impactDelay = activePower?.id === 'giant' ? GIANT_HAMMER_IMPACT_DELAY : HAMMER_IMPACT_DELAY;
+  scheduleTimeout(() => performHammerStrike(strikeX, strikeY), impactDelay);
 });
 
 function performHammerStrike(strikeX, strikeY) {
