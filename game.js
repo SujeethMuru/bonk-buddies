@@ -32,23 +32,21 @@ const GAME_CONFIG = {
   }
 };
 
-const HAMMER_IMPACT_DELAY = 90;
-const GIANT_HAMMER_IMPACT_DELAY = 100;
-const BUDDY_HIT_RADIUS = 18;
-const GIANT_BUDDY_HIT_RADIUS = 40;
+const BUDDY_HIT_RADIUS = 52;
+const GIANT_BUDDY_HIT_RADIUS = 88;
 
 const BUDDIES = [
   { id: 'charan', sprite: 'charan-clean.png', angrySprite: 'charan-angry.png' },
   { id: 'yesh', sprite: 'yesh-clean.png', angrySprite: 'yesh-angry.png' },
   { id: 'kiran', sprite: 'kiran.png', angrySprite: 'kiran-angry.png' },
   { id: 'vaibhav', sprite: 'vaibhav.png', angrySprite: 'vaibhav-angry.png' },
-  { id: 'anand', sprite: 'anand.jpg' },
-  { id: 'henry', sprite: 'henry.jpg' },
-  { id: 'hozaif', sprite: 'hozaif.jpg' },
-  { id: 'johannes', sprite: 'johannes.jpg' },
-  { id: 'leyneesh', sprite: 'leyneesh.jpg' },
-  { id: 'mukesh', sprite: 'mukesh.jpg' },
-  { id: 'rohan', sprite: 'rohan.jpg' }
+  { id: 'anand', sprite: 'anand.png' },
+  { id: 'henry', sprite: 'henry.png' },
+  { id: 'hozaif', sprite: 'hozaif.png' },
+  { id: 'johannes', sprite: 'johannes.png' },
+  { id: 'leyneesh', sprite: 'leyneesh.png' },
+  { id: 'mukesh', sprite: 'mukesh.png' },
+  { id: 'rohan', sprite: 'rohan.png' }
 ];
 
 BUDDIES.forEach(({ sprite, angrySprite }) => {
@@ -154,8 +152,7 @@ document.addEventListener('pointerdown', event => {
   if (!running || !screens.game.contains(event.target) || event.target.closest('.game-controls, .quit-modal')) return;
   const strikeX = event.clientX;
   const strikeY = event.clientY;
-  const impactDelay = activePower?.id === 'giant' ? GIANT_HAMMER_IMPACT_DELAY : HAMMER_IMPACT_DELAY;
-  scheduleTimeout(() => performHammerStrike(strikeX, strikeY), impactDelay);
+  performHammerStrike(strikeX, strikeY);
 });
 
 function performHammerStrike(strikeX, strikeY) {
@@ -350,12 +347,6 @@ function spawnBuddy(options = {}) {
 
 function expireBuddy(hole) {
   if (!hole.classList.contains('up')) return;
-  hole.classList.add('expired');
-  if (hole.dataset.hit === '0' && !hole._buddy?.isFakeOut) {
-    combo = 0;
-    misses++;
-    updateHud();
-  }
   const shouldTease = hole._buddy?.isFakeOut || Math.random() < GAME_CONFIG.teaseChance;
   if (!shouldTease) {
     beginRetreat(hole);
@@ -366,15 +357,16 @@ function expireBuddy(hole) {
     ? randomChoice(['PSYCH!', 'TOO SLOW!', 'GOTCHA!'])
     : randomChoice(['MISSED ME!', 'NICE TRY!', 'TOO SLOW!']);
   addSpeechBubble(hole, tease);
-  scheduleTimeout(() => beginRetreat(hole), GAME_CONFIG.teaseDuration);
+  hole._timer = scheduleTimeout(() => beginRetreat(hole), GAME_CONFIG.teaseDuration);
 }
 
 function hitBuddy(hole) {
   const buddy = hole._buddy;
-  if (!buddy || buddy.isFakeOut || hole.dataset.hit === '1' || hole.classList.contains('expired')) return;
+  if (!buddy || buddy.isFakeOut || hole.dataset.hit === '1') return;
 
   hole.dataset.hit = '1';
   cancelTimeout(hole._timer);
+  hole.classList.remove('teasing', 'retreating');
   hits++;
   friendHits[buddy.who]++;
   combo++;
@@ -413,7 +405,17 @@ function beginRetreat(hole) {
   cancelTimeout(hole._timer);
   hole.classList.remove('teasing');
   hole.classList.add('retreating');
-  hole._timer = scheduleTimeout(() => clearHole(hole), GAME_CONFIG.retreatDuration);
+  hole._timer = scheduleTimeout(() => finishRetreat(hole), GAME_CONFIG.retreatDuration);
+}
+
+function finishRetreat(hole) {
+  if (hole.dataset.hit === '0' && !hole._buddy?.isFakeOut) {
+    combo = 0;
+    misses++;
+    updateHud();
+  }
+  hole.classList.add('expired');
+  clearHole(hole);
 }
 
 function playHitReaction(hole) {
@@ -617,10 +619,12 @@ function endGame() {
   $('#finalCombo').textContent = `x${bestCombo}`;
   const accuracy = hits + misses ? Math.round((hits / (hits + misses)) * 100) : 0;
   $('#finalAccuracy').textContent = `${accuracy}%`;
-  $('#charanHits').textContent = friendHits.charan;
-  $('#yeshHits').textContent = friendHits.yesh;
-  $('#kiranHits').textContent = friendHits.kiran;
-  $('#vaibhavHits').textContent = friendHits.vaibhav;
+  $('#buddyStats').innerHTML = BUDDIES.map(({ id }) => `
+    <div class="friend-stat">
+      <small>${id.toUpperCase()} BONKS</small>
+      <b>${friendHits[id]}</b>
+    </div>
+  `).join('');
   const durationScale = selectedDuration / GAME_CONFIG.duration;
   $('#rank').textContent = score > 12000 * durationScale
     ? 'LEGENDARY BONK LORD'

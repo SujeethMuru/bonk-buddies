@@ -99,7 +99,7 @@
 
 /* Match timers, expanded result stats, and multiplier power-up family. */
 .timer-heading{margin-top:16px}.timer-select{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.timer-select button{color:#cdb5d8;background:#312047;border:3px solid #76548b;padding:9px 5px;cursor:pointer;font-size:7px;box-shadow:3px 3px #100b1d}.timer-select button.selected{color:#24143b;background:var(--yellow);border-color:#fff2c6;transform:translateY(-2px)}
-.result-grid .friend-stat{background:#472655;border-bottom-color:#e15168}.result-grid .friend-stat b{color:#42d7cc}.result-grid .friend-stat:last-child{grid-column:2}
+.result-card{max-height:calc(100vh - 120px);overflow-y:auto}.buddy-stats{display:contents}.result-grid .friend-stat{background:#472655;border-bottom-color:#e15168}.result-grid .friend-stat b{color:#42d7cc}
 .powerup-golden,.powerup-silver,.powerup-ruby{border-color:#fff8d5;box-shadow:7px 7px 0 var(--ink),0 0 0 6px var(--multiplier-glow);animation:pixel-float .7s steps(2,end) infinite alternate,multiplier-pulse .35s steps(2,end) infinite alternate;font-size:15px;font-weight:bold;text-shadow:2px 2px var(--ink)}
 .powerup-golden{--multiplier-glow:#ff9f2f;background:#ffd43b;color:#fff}.powerup-silver{--multiplier-glow:#8295ad;background:#dce5ed;color:#fff}.powerup-ruby{--multiplier-glow:#ff704f;background:#d72852;color:#fff}
 @keyframes multiplier-pulse{to{filter:brightness(1.35) drop-shadow(0 0 7px var(--multiplier-glow))}}
