@@ -1,60 +1,606 @@
-const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const screens={menu:$('#menu'),game:$('#game'),results:$('#results')};
-const field=$('#field'), hammer=$('#hammer'), toast=$('#toast');
-const settings={easy:{up:1250,gap:800,max:2},normal:{up:900,gap:560,max:3},hard:{up:620,gap:350,max:4}};
-let level='normal',running=false,paused=false,pauseStarted=0,score=0,hits=0,misses=0,combo=0,bestCombo=0,timeLeft=120000;
-let spawnTimer,clockTimer,powerTimer,lastTick,audioOn=true,audioCtx,musicTimer,activePower=null,powerUntil=0;
+const $ = selector => document.querySelector(selector);
+const $$ = selector => [...document.querySelectorAll(selector)];
 
-async function removeGreen(img){
-  if(!img.complete) await new Promise(r=>img.onload=r);
-  const c=document.createElement('canvas'),x=c.getContext('2d',{willReadFrequently:true});
-  c.width=img.naturalWidth;c.height=img.naturalHeight;x.drawImage(img,0,0);
-  const d=x.getImageData(0,0,c.width,c.height),p=d.data;
-  for(let i=0;i<p.length;i+=4){const r=p[i],g=p[i+1],b=p[i+2],dominance=g-Math.max(r,b);if(g>70&&g>r*1.12&&g>b*1.12)p[i+3]=dominance>45?0:Math.max(0,255-dominance*5.5)}
-  x.putImageData(d,0,0);
-  img.src=c.toDataURL('image/png');
-}
-Promise.all($$('.keyed').map(removeGreen));
-
-for(let i=0;i<9;i++){const h=document.createElement('div');h.className='hole';h.dataset.i=i;field.appendChild(h)}
-$$('[data-level]').forEach(b=>b.onclick=()=>{$$('[data-level]').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');level=b.dataset.level;blip(520,.05)});
-$('#startBtn').onclick=startGame;$('#againBtn').onclick=startGame;$('#menuBtn').onclick=()=>show('menu');
-$('#quitBtn').onclick=()=>$('#quitModal').classList.remove('hidden');
-$('#pauseBtn').onclick=pauseGame;$('#resumeBtn').onclick=resumeGame;
-$('#keepPlaying').onclick=()=>$('#quitModal').classList.add('hidden');
-$('#confirmQuit').onclick=()=>{running=false;clearTimers();field.querySelectorAll('.hole').forEach(clearHole);$('#quitModal').classList.add('hidden');show('menu')};
-$('#soundBtn').onclick=()=>{audioOn=!audioOn;$('#soundBtn').textContent=audioOn?'♫ ON':'♫ OFF';if(!audioOn)stopMusic();else if(running)startMusic()};
-document.addEventListener('pointermove',e=>{hammer.style.left=e.clientX+'px';hammer.style.top=e.clientY+'px'});
-document.addEventListener('pointerdown',()=>{hammer.classList.remove('swing');void hammer.offsetWidth;hammer.classList.add('swing')});
-field.addEventListener('pointerdown',e=>{
-  if(!running)return;
-  const hole=e.target.closest('.hole');
-  if(activePower==='range'){
-    const targets=$$('.hole.up').map(h=>{const r=h.getBoundingClientRect();return{h,d:Math.hypot(e.clientX-(r.left+r.width/2),e.clientY-(r.top+r.height/2))}}).sort((a,b)=>a.d-b.d);
-    if(targets[0]&&targets[0].d<180){hitBuddy(targets[0].h,targets[0].h.querySelector('.buddy').src.includes('charan')?'charan':'yesh');return}
+const GAME_CONFIG = {
+  duration: 120000,
+  difficulties: {
+    easy: { visibleDuration: 1250, spawnGap: 800, maxVisible: 2 },
+    normal: { visibleDuration: 900, spawnGap: 560, maxVisible: 3 },
+    hard: { visibleDuration: 620, spawnGap: 350, maxVisible: 4 }
+  },
+  reactions: ['squish', 'shake', 'dizzy', 'surprised', 'particles'],
+  reactionDuration: 360,
+  specialPatternChance: 0.32,
+  goldenBuddy: {
+    spawnChance: 0.07,
+    scoreValue: 500,
+    visibleDuration: 560
+  },
+  powerups: {
+    checkInterval: 11000,
+    appearanceChance: 0.48,
+    collectibleDuration: 5000,
+    pointerHitRadius: 44,
+    giantPointerHitRadius: 64,
+    giant: { label: 'GIANT HAMMER', icon: '🔨', duration: 9000 },
+    golden: { label: 'GOLDEN HAMMER', icon: '✨', duration: 9000, scoreMultiplier: 2 }
   }
-  if(hole&&!hole.classList.contains('up')){misses++;combo=0;updateHud();blip(100,.04)}
+};
+
+const GOLDEN_BUDDY_SPAWN_CHANCE = GAME_CONFIG.goldenBuddy.spawnChance;
+const GOLDEN_BUDDY_SCORE_VALUE = GAME_CONFIG.goldenBuddy.scoreValue;
+const GOLDEN_BUDDY_VISIBLE_DURATION = GAME_CONFIG.goldenBuddy.visibleDuration;
+
+const screens = { menu: $('#menu'), game: $('#game'), results: $('#results') };
+const field = $('#field');
+const hammer = $('#hammer');
+const toast = $('#toast');
+const trackedTimeouts = new Set();
+
+let level = 'normal';
+let running = false;
+let paused = false;
+let score = 0;
+let hits = 0;
+let misses = 0;
+let combo = 0;
+let bestCombo = 0;
+let timeLeft = GAME_CONFIG.duration;
+let clockTimer = null;
+let powerTimer = null;
+let musicTimer = null;
+let lastTick = 0;
+let audioOn = true;
+let audioCtx;
+let activePower = null;
+let pausedPower = null;
+let lastSpecialPattern = '';
+
+function scheduleTimeout(callback, delay) {
+  const timer = setTimeout(() => {
+    trackedTimeouts.delete(timer);
+    callback();
+  }, delay);
+  trackedTimeouts.add(timer);
+  return timer;
+}
+
+function cancelTimeout(timer) {
+  if (!timer) return;
+  clearTimeout(timer);
+  trackedTimeouts.delete(timer);
+}
+
+function clearTrackedTimeouts() {
+  trackedTimeouts.forEach(clearTimeout);
+  trackedTimeouts.clear();
+}
+
+for (let index = 0; index < 9; index++) {
+  const hole = document.createElement('div');
+  hole.className = 'hole';
+  hole.dataset.index = index;
+  field.appendChild(hole);
+}
+
+$$('[data-level]').forEach(button => {
+  button.addEventListener('click', () => {
+    $$('[data-level]').forEach(option => option.classList.remove('selected'));
+    button.classList.add('selected');
+    level = button.dataset.level;
+    blip(520, 0.05);
+  });
 });
 
-function show(name){Object.values(screens).forEach(s=>s.classList.add('hidden'));screens[name].classList.remove('hidden');$('#hud').classList.toggle('hidden',name!=='game')}
-function startGame(){initAudio();clearTimers();score=hits=misses=combo=bestCombo=0;timeLeft=120000;activePower=null;powerUntil=0;paused=false;$('#pauseModal').classList.add('hidden');field.querySelectorAll('.hole').forEach(clearHole);show('game');running=true;lastTick=performance.now();updateHud();scheduleSpawn();clockTimer=setInterval(tick,100);powerTimer=setInterval(spawnPower,12000);startMusic();showToast(level.toUpperCase()+' MODE!')}
-function scheduleSpawn(){if(!running)return;const slow=activePower==='slow'?1.65:1;spawnTimer=setTimeout(()=>{spawnBuddy();scheduleSpawn()},settings[level].gap*slow*(.78+Math.random()*.42))}
-function spawnBuddy(){const open=$$('.hole:not(.up)');const current=$$('.hole.up').length;if(!open.length||current>=settings[level].max)return;const h=open[Math.floor(Math.random()*open.length)],who=Math.random()<.5?'charan':'yesh';const img=new Image();img.className='buddy';img.src=`assets/${who}.png`;h.innerHTML='';h.appendChild(img);h.classList.add('up');h.dataset.hit='0';h.onclick=()=>hitBuddy(h,who);const duration=settings[level].up*(activePower==='slow'?1.7:1);h._timer=setTimeout(()=>{if(h.dataset.hit==='0'){combo=0;misses++;updateHud()}clearHole(h)},duration)}
-function hitBuddy(h,who){if(h.dataset.hit==='1')return;h.dataset.hit='1';hits++;combo++;bestCombo=Math.max(bestCombo,combo);const mult=1+Math.floor(combo/5);score+=100*mult;h.classList.add('hit');const s=document.createElement('span');s.className='speech';s.textContent=Math.random()<.5?'OUCH!':'OW!';h.appendChild(s);bonk();showToast((who==='charan'?'CHARAN':'YESH')+' +'+(100*mult));updateHud();setTimeout(()=>clearHole(h),280)}
-function clearHole(h){if(!h)return;clearTimeout(h._timer);h.className='hole';h.innerHTML='';h.onclick=null}
-function tick(){const now=performance.now();timeLeft-=now-lastTick;lastTick=now;if(activePower&&now>powerUntil){activePower=null;$('#powerStatus').textContent='NONE'}if(timeLeft<=0)endGame();updateHud()}
-function updateHud(){const t=Math.max(0,Math.ceil(timeLeft/1000));$('#score').textContent=String(score).padStart(4,'0');$('#timer').textContent=`${String(Math.floor(t/60)).padStart(2,'0')}:${String(t%60).padStart(2,'0')}`;$('#combo').textContent='x'+Math.max(1,1+Math.floor(combo/5))}
-function spawnPower(){if(!running||$('.powerup'))return;const p=document.createElement('button');p.className='powerup';const slow=Math.random()<.5;p.textContent=slow?'⏳':'💥';p.title=slow?'Slow time':'Wide hammer';p.style.left=(10+Math.random()*80)+'%';p.style.top=(38+Math.random()*42)+'%';screens.game.appendChild(p);p.onclick=e=>{e.stopPropagation();activePower=slow?'slow':'range';powerUntil=performance.now()+10000;$('#powerStatus').textContent=slow?'SLOW-MO 10s':'MEGA HAMMER 10s';if(!slow)hammer.style.transform='translate(-20px,-75px) scale(1.55) rotate(-20deg)';setTimeout(()=>hammer.style.transform='',10000);powerSound();p.remove();showToast(slow?'TIME WARP!':'MEGA BONK!')};setTimeout(()=>p.remove(),5000)}
-function endGame(){running=false;clearTimers();field.querySelectorAll('.hole').forEach(clearHole);show('results');$('#finalScore').textContent=String(score).padStart(4,'0');$('#finalHits').textContent=hits;$('#finalCombo').textContent='x'+bestCombo;const acc=hits+misses?Math.round(hits/(hits+misses)*100):0;$('#finalAccuracy').textContent=acc+'%';$('#rank').textContent=score>12000?'LEGENDARY BONK LORD':score>7000?'HAMMER HERO':score>3500?'BONK APPRENTICE':'ROOKIE BONKER';victorySound()}
-function clearTimers(){clearTimeout(spawnTimer);clearInterval(clockTimer);clearInterval(powerTimer);stopMusic()}
-function pauseGame(){if(!running||paused)return;paused=true;running=false;pauseStarted=performance.now();clearTimers();field.querySelectorAll('.hole').forEach(clearHole);$('.powerup')?.remove();$('#pauseModal').classList.remove('hidden')}
-function resumeGame(){if(!paused)return;const pausedFor=performance.now()-pauseStarted;if(activePower)powerUntil+=pausedFor;paused=false;running=true;lastTick=performance.now();$('#pauseModal').classList.add('hidden');scheduleSpawn();clockTimer=setInterval(tick,100);powerTimer=setInterval(spawnPower,12000);startMusic();showToast('GO!')}
-function showToast(t){toast.textContent=t;toast.classList.remove('show');void toast.offsetWidth;toast.classList.add('show')}
-function initAudio(){if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();audioCtx.resume()}
-function tone(freq,dur,type='square',vol=.035,when=0){if(!audioOn||!audioCtx)return;const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,audioCtx.currentTime+when);g.gain.setValueAtTime(vol,audioCtx.currentTime+when);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+when+dur);o.connect(g).connect(audioCtx.destination);o.start(audioCtx.currentTime+when);o.stop(audioCtx.currentTime+when+dur)}
-function blip(f,d){initAudio();tone(f,d)}
-function bonk(){initAudio();tone(120,.12,'square',.09);tone(75,.2,'sawtooth',.055,.04);tone(500,.06,'square',.025,.06)}
-function powerSound(){[300,450,650,900].forEach((f,i)=>tone(f,.13,'square',.04,i*.07))}
-function victorySound(){initAudio();[262,330,392,523].forEach((f,i)=>tone(f,.25,'square',.05,i*.12))}
-function startMusic(){if(!audioOn||!running)return;stopMusic();let i=0;const notes=[131,165,196,165,147,185,220,185,131,165,247,196,147,185,220,294];musicTimer=setInterval(()=>{tone(notes[i++%notes.length],.11,'square',.018);if(i%4===0)tone(65,.08,'triangle',.025)},140)}
-function stopMusic(){clearInterval(musicTimer)}
+$('#startBtn').addEventListener('click', startGame);
+$('#againBtn').addEventListener('click', startGame);
+$('#menuBtn').addEventListener('click', () => showScreen('menu'));
+$('#quitBtn').addEventListener('click', () => $('#quitModal').classList.remove('hidden'));
+$('#pauseBtn').addEventListener('click', pauseGame);
+$('#resumeBtn').addEventListener('click', resumeGame);
+$('#keepPlaying').addEventListener('click', () => $('#quitModal').classList.add('hidden'));
+$('#confirmQuit').addEventListener('click', quitGame);
+$('#soundBtn').addEventListener('click', toggleSound);
+
+document.addEventListener('pointermove', event => {
+  hammer.style.left = `${event.clientX}px`;
+  hammer.style.top = `${event.clientY}px`;
+});
+
+document.addEventListener('pointerdown', event => {
+  collectNearbyPowerup(event.clientX, event.clientY);
+  hammer.classList.remove('swing');
+  void hammer.offsetWidth;
+  hammer.classList.add('swing');
+});
+
+field.addEventListener('pointerdown', event => {
+  if (!running) return;
+  const hole = event.target.closest('.hole');
+  if (!hole) return;
+  if (hole.classList.contains('up')) {
+    hitBuddy(hole);
+    return;
+  }
+  misses++;
+  combo = 0;
+  updateHud();
+  blip(100, 0.04);
+});
+
+function showScreen(name) {
+  Object.values(screens).forEach(screen => screen.classList.add('hidden'));
+  screens[name].classList.remove('hidden');
+  $('#hud').classList.toggle('hidden', name !== 'game');
+}
+
+function startGame() {
+  initAudio();
+  clearGameTimers();
+  clearActivePower();
+  removePowerupCollectible();
+  score = 0;
+  hits = 0;
+  misses = 0;
+  combo = 0;
+  bestCombo = 0;
+  lastSpecialPattern = '';
+  pausedPower = null;
+  timeLeft = GAME_CONFIG.duration;
+  paused = false;
+  running = true;
+  $('#pauseModal').classList.add('hidden');
+  $('#quitModal').classList.add('hidden');
+  $$('.hole').forEach(clearHole);
+  showScreen('game');
+  lastTick = performance.now();
+  updateHud();
+  scheduleNextPattern(350);
+  clockTimer = setInterval(tick, 100);
+  powerTimer = setInterval(trySpawnPowerup, GAME_CONFIG.powerups.checkInterval);
+  startMusic();
+  showToast(`${level.toUpperCase()} MODE!`);
+}
+
+function quitGame() {
+  running = false;
+  paused = false;
+  clearGameTimers();
+  clearActivePower();
+  removePowerupCollectible();
+  $$('.hole').forEach(clearHole);
+  $('#quitModal').classList.add('hidden');
+  showScreen('menu');
+}
+
+function scheduleNextPattern(extraDelay = 0) {
+  if (!running) return;
+  const settings = GAME_CONFIG.difficulties[level];
+  const delay = extraDelay + settings.spawnGap * (0.78 + Math.random() * 0.42);
+  scheduleTimeout(() => {
+    const patternDuration = runSelectedPattern();
+    scheduleNextPattern(patternDuration);
+  }, delay);
+}
+
+const SPAWN_PATTERNS = {
+  standard() {
+    spawnBuddy();
+    return 0;
+  },
+  leftToRight() {
+    const rowStart = Math.floor(Math.random() * 3) * 3;
+    [0, 1, 2].forEach((offset, step) => schedulePatternSpawn(step * 170, rowStart + offset));
+    return 420;
+  },
+  rightToLeft() {
+    const rowStart = Math.floor(Math.random() * 3) * 3;
+    [2, 1, 0].forEach((offset, step) => schedulePatternSpawn(step * 170, rowStart + offset));
+    return 420;
+  },
+  double() {
+    spawnBuddy();
+    schedulePatternSpawn(90);
+    return 180;
+  },
+  triple() {
+    spawnBuddy();
+    schedulePatternSpawn(75);
+    schedulePatternSpawn(150);
+    return 250;
+  },
+  speedBurst() {
+    [0, 120, 240, 360].forEach(delay => schedulePatternSpawn(delay, null, { durationScale: 0.62 }));
+    return 480;
+  },
+  fakeOut() {
+    spawnBuddy({ fakeOut: true });
+    return 300;
+  }
+};
+
+function runSelectedPattern() {
+  if (Math.random() >= GAME_CONFIG.specialPatternChance) return SPAWN_PATTERNS.standard();
+  const patternNames = ['leftToRight', 'rightToLeft', 'double', 'triple', 'speedBurst', 'fakeOut'];
+  const eligiblePatterns = patternNames.filter(name => name !== lastSpecialPattern);
+  const selectedName = randomChoice(eligiblePatterns);
+  lastSpecialPattern = selectedName;
+  return SPAWN_PATTERNS[selectedName]();
+}
+
+function schedulePatternSpawn(delay, holeIndex = null, options = {}) {
+  scheduleTimeout(() => {
+    if (running) spawnBuddy({ ...options, holeIndex });
+  }, delay);
+}
+
+function spawnBuddy(options = {}) {
+  if (!running) return false;
+  const settings = GAME_CONFIG.difficulties[level];
+  const openHoles = $$('.hole:not(.up)');
+  if (!openHoles.length || $$('.hole.up').length >= settings.maxVisible) return false;
+
+  let hole = options.holeIndex === null || options.holeIndex === undefined
+    ? null
+    : field.querySelector(`.hole[data-index="${options.holeIndex}"]:not(.up)`);
+  if (!hole) hole = openHoles[Math.floor(Math.random() * openHoles.length)];
+
+  const who = Math.random() < 0.5 ? 'charan' : 'yesh';
+  const isGolden = !options.fakeOut && Math.random() < GOLDEN_BUDDY_SPAWN_CHANCE;
+  const image = new Image();
+  image.className = 'buddy';
+  image.src = `assets/${who}.png`;
+  image.alt = `${isGolden ? 'Golden ' : ''}${who}`;
+
+  clearHole(hole);
+  const buddyStage = document.createElement('div');
+  buddyStage.className = 'buddy-stage';
+  buddyStage.appendChild(image);
+  hole.appendChild(buddyStage);
+  if (isGolden) hole.classList.add('golden');
+  if (options.fakeOut) hole.classList.add('fake-out');
+  hole.dataset.hit = '0';
+  hole._buddy = { who, isGolden, isFakeOut: Boolean(options.fakeOut) };
+
+  if (isGolden) {
+    addHoleBadge(hole, 'GOLD!', 'golden-badge');
+    addGoldenSparkles(hole);
+  }
+  if (options.fakeOut) addHoleBadge(hole, '?', 'fake-badge');
+
+  // Commit the hidden starting position before raising the buddy.
+  void buddyStage.offsetHeight;
+  hole.classList.add('up');
+
+  const baseDuration = isGolden ? GOLDEN_BUDDY_VISIBLE_DURATION : settings.visibleDuration;
+  const visibleDuration = options.fakeOut ? 260 : baseDuration * (options.durationScale || 1);
+  hole._timer = scheduleTimeout(() => expireBuddy(hole), visibleDuration);
+  return true;
+}
+
+function expireBuddy(hole) {
+  if (!hole.classList.contains('up')) return;
+  if (hole.dataset.hit === '0' && !hole._buddy?.isFakeOut) {
+    combo = 0;
+    misses++;
+    updateHud();
+  }
+  clearHole(hole);
+}
+
+function hitBuddy(hole) {
+  const buddy = hole._buddy;
+  if (!buddy || buddy.isFakeOut || hole.dataset.hit === '1') return;
+
+  hole.dataset.hit = '1';
+  cancelTimeout(hole._timer);
+  hits++;
+  combo++;
+  bestCombo = Math.max(bestCombo, combo);
+
+  const comboMultiplier = 1 + Math.floor(combo / 5);
+  const basePoints = buddy.isGolden ? GOLDEN_BUDDY_SCORE_VALUE : 100 * comboMultiplier;
+  const powerMultiplier = activePower?.id === 'golden'
+    ? GAME_CONFIG.powerups.golden.scoreMultiplier
+    : 1;
+  const pointsAwarded = basePoints * powerMultiplier;
+  score += pointsAwarded;
+
+  hole.classList.add('hit');
+  playHitReaction(hole);
+  addSpeechBubble(hole, buddy.isGolden ? `JACKPOT +${pointsAwarded}!` : randomChoice(['OUCH!', 'OW!', 'BONK!']));
+  bonk();
+  showToast(`${buddy.isGolden ? 'GOLDEN ' : ''}${buddy.who.toUpperCase()} +${pointsAwarded}`);
+  updateHud();
+  scheduleTimeout(() => clearHole(hole), GAME_CONFIG.reactionDuration);
+}
+
+function playHitReaction(hole) {
+  const reaction = randomChoice(GAME_CONFIG.reactions);
+  hole.classList.add(`reaction-${reaction}`);
+  if (reaction === 'dizzy') addDizzyStars(hole);
+  if (reaction === 'particles') addPixelParticles(hole, activePower?.id === 'giant' ? 10 : 6);
+  if (activePower?.id === 'giant' && reaction !== 'particles') addPixelParticles(hole, 8);
+}
+
+function addSpeechBubble(hole, text) {
+  const speech = document.createElement('span');
+  speech.className = 'speech';
+  speech.textContent = text;
+  hole.appendChild(speech);
+}
+
+function addDizzyStars(hole) {
+  const stars = document.createElement('span');
+  stars.className = 'dizzy-stars';
+  stars.innerHTML = '<i>★</i><i>★</i><i>★</i>';
+  hole.appendChild(stars);
+}
+
+function addPixelParticles(hole, count) {
+  const colors = ['#ffd43b', '#ff7a2d', '#42d7cc', '#fff2c6'];
+  for (let index = 0; index < count; index++) {
+    const particle = document.createElement('i');
+    particle.className = 'hit-particle';
+    particle.style.setProperty('--particle-angle', `${(360 / count) * index}deg`);
+    particle.style.setProperty('--particle-color', colors[index % colors.length]);
+    hole.appendChild(particle);
+  }
+}
+
+function addGoldenSparkles(hole) {
+  for (let index = 0; index < 4; index++) {
+    const sparkle = document.createElement('i');
+    sparkle.className = 'golden-sparkle';
+    sparkle.style.setProperty('--sparkle-delay', `${index * 0.12}s`);
+    sparkle.style.setProperty('--sparkle-left', `${24 + index * 17}%`);
+    hole.appendChild(sparkle);
+  }
+}
+
+function addHoleBadge(hole, text, className) {
+  const badge = document.createElement('span');
+  badge.className = `hole-badge ${className}`;
+  badge.textContent = text;
+  hole.appendChild(badge);
+}
+
+function clearHole(hole) {
+  if (!hole) return;
+  cancelTimeout(hole._timer);
+  hole.className = 'hole';
+  hole.innerHTML = '';
+  hole.dataset.hit = '';
+  hole._buddy = null;
+  hole._timer = null;
+}
+
+function tick() {
+  const now = performance.now();
+  timeLeft -= now - lastTick;
+  lastTick = now;
+  updateActivePower(now);
+  if (timeLeft <= 0) {
+    endGame();
+    return;
+  }
+  updateHud();
+}
+
+function updateHud() {
+  const seconds = Math.max(0, Math.ceil(timeLeft / 1000));
+  $('#score').textContent = String(score).padStart(4, '0');
+  $('#timer').textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+  $('#combo').textContent = `x${Math.max(1, 1 + Math.floor(combo / 5))}`;
+}
+
+function trySpawnPowerup() {
+  if (!running || $('.powerup') || Math.random() > GAME_CONFIG.powerups.appearanceChance) return;
+  const powerId = Math.random() < 0.5 ? 'giant' : 'golden';
+  const config = GAME_CONFIG.powerups[powerId];
+  const collectible = document.createElement('button');
+  collectible.className = `powerup powerup-${powerId}`;
+  collectible.type = 'button';
+  collectible.textContent = config.icon;
+  collectible.title = config.label;
+  collectible.setAttribute('aria-label', `Collect ${config.label}`);
+  collectible.style.left = `${10 + Math.random() * 80}%`;
+  collectible.style.top = `${38 + Math.random() * 42}%`;
+  collectible.dataset.powerId = powerId;
+  screens.game.appendChild(collectible);
+  collectible.addEventListener('pointerdown', event => {
+    event.stopPropagation();
+    collectPowerup(collectible);
+  });
+  collectible._timer = scheduleTimeout(() => collectible.remove(), GAME_CONFIG.powerups.collectibleDuration);
+}
+
+function collectPowerup(collectible) {
+  if (!collectible?.isConnected) return;
+  const powerId = collectible.dataset.powerId;
+  cancelTimeout(collectible._timer);
+  collectible.remove();
+  activatePowerup(powerId);
+}
+
+function collectNearbyPowerup(pointerX, pointerY) {
+  if (!running) return;
+  const collectible = $('.powerup');
+  if (!collectible) return;
+  const bounds = collectible.getBoundingClientRect();
+  const nearestX = Math.max(bounds.left, Math.min(pointerX, bounds.right));
+  const nearestY = Math.max(bounds.top, Math.min(pointerY, bounds.bottom));
+  const distance = Math.hypot(pointerX - nearestX, pointerY - nearestY);
+  const hitRadius = activePower?.id === 'giant'
+    ? GAME_CONFIG.powerups.giantPointerHitRadius
+    : GAME_CONFIG.powerups.pointerHitRadius;
+  if (distance <= hitRadius) collectPowerup(collectible);
+}
+
+function activatePowerup(powerId) {
+  clearActivePower();
+  const config = GAME_CONFIG.powerups[powerId];
+  activePower = { id: powerId, expiresAt: performance.now() + config.duration };
+  screens.game.classList.toggle('giant-hammer-active', powerId === 'giant');
+  powerSound();
+  updateActivePower(performance.now());
+  showToast(`${config.label}!`);
+}
+
+function updateActivePower(now) {
+  if (!activePower) {
+    $('#powerStatus').textContent = 'NONE';
+    return;
+  }
+  if (now >= activePower.expiresAt) {
+    clearActivePower();
+    return;
+  }
+  const config = GAME_CONFIG.powerups[activePower.id];
+  const secondsLeft = Math.ceil((activePower.expiresAt - now) / 1000);
+  $('#powerStatus').textContent = `${config.label} ${secondsLeft}s`;
+}
+
+function clearActivePower() {
+  activePower = null;
+  screens.game.classList.remove('giant-hammer-active');
+  $('#powerStatus').textContent = 'NONE';
+}
+
+function removePowerupCollectible() {
+  const collectible = $('.powerup');
+  if (!collectible) return;
+  cancelTimeout(collectible._timer);
+  collectible.remove();
+}
+
+function pauseGame() {
+  if (!running || paused) return;
+  paused = true;
+  running = false;
+  pausedPower = activePower
+    ? { id: activePower.id, remaining: Math.max(0, activePower.expiresAt - performance.now()) }
+    : null;
+  clearGameTimers();
+  clearActivePower();
+  removePowerupCollectible();
+  $$('.hole').forEach(clearHole);
+  $('#pauseModal').classList.remove('hidden');
+}
+
+function resumeGame() {
+  if (!paused) return;
+  paused = false;
+  running = true;
+  lastTick = performance.now();
+  $('#pauseModal').classList.add('hidden');
+  scheduleNextPattern(250);
+  clockTimer = setInterval(tick, 100);
+  powerTimer = setInterval(trySpawnPowerup, GAME_CONFIG.powerups.checkInterval);
+  if (pausedPower?.remaining > 0) {
+    activePower = { id: pausedPower.id, expiresAt: performance.now() + pausedPower.remaining };
+    screens.game.classList.toggle('giant-hammer-active', activePower.id === 'giant');
+    pausedPower = null;
+    updateActivePower(performance.now());
+  }
+  startMusic();
+  showToast('GO!');
+}
+
+function endGame() {
+  running = false;
+  clearGameTimers();
+  clearActivePower();
+  removePowerupCollectible();
+  $$('.hole').forEach(clearHole);
+  showScreen('results');
+  $('#finalScore').textContent = String(score).padStart(4, '0');
+  $('#finalHits').textContent = hits;
+  $('#finalCombo').textContent = `x${bestCombo}`;
+  const accuracy = hits + misses ? Math.round((hits / (hits + misses)) * 100) : 0;
+  $('#finalAccuracy').textContent = `${accuracy}%`;
+  $('#rank').textContent = score > 12000 ? 'LEGENDARY BONK LORD' : score > 7000 ? 'HAMMER HERO' : score > 3500 ? 'BONK APPRENTICE' : 'ROOKIE BONKER';
+  victorySound();
+}
+
+function clearGameTimers() {
+  clearTrackedTimeouts();
+  clearInterval(clockTimer);
+  clearInterval(powerTimer);
+  clockTimer = null;
+  powerTimer = null;
+  stopMusic();
+}
+
+function showToast(text) {
+  toast.textContent = text;
+  toast.classList.remove('show');
+  void toast.offsetWidth;
+  toast.classList.add('show');
+}
+
+function randomChoice(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function toggleSound() {
+  audioOn = !audioOn;
+  $('#soundBtn').textContent = audioOn ? '♫ ON' : '♫ OFF';
+  if (!audioOn) stopMusic();
+  else if (running) startMusic();
+}
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  audioCtx.resume();
+}
+
+function tone(frequency, duration, type = 'square', volume = 0.035, when = 0) {
+  if (!audioOn || !audioCtx) return;
+  const oscillator = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime + when);
+  gain.gain.setValueAtTime(volume, audioCtx.currentTime + when);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + when + duration);
+  oscillator.connect(gain).connect(audioCtx.destination);
+  oscillator.start(audioCtx.currentTime + when);
+  oscillator.stop(audioCtx.currentTime + when + duration);
+}
+
+function blip(frequency, duration) {
+  initAudio();
+  tone(frequency, duration);
+}
+
+function bonk() {
+  initAudio();
+  tone(120, 0.12, 'square', 0.09);
+  tone(75, 0.2, 'sawtooth', 0.055, 0.04);
+  tone(500, 0.06, 'square', 0.025, 0.06);
+}
+
+function powerSound() {
+  [300, 450, 650, 900].forEach((frequency, index) => tone(frequency, 0.13, 'square', 0.04, index * 0.07));
+}
+
+function victorySound() {
+  initAudio();
+  [262, 330, 392, 523].forEach((frequency, index) => tone(frequency, 0.25, 'square', 0.05, index * 0.12));
+}
+
+function startMusic() {
+  if (!audioOn || !running) return;
+  stopMusic();
+  let index = 0;
+  const notes = [131, 165, 196, 165, 147, 185, 220, 185, 131, 165, 247, 196, 147, 185, 220, 294];
+  musicTimer = setInterval(() => {
+    tone(notes[index++ % notes.length], 0.11, 'square', 0.018);
+    if (index % 4 === 0) tone(65, 0.08, 'triangle', 0.025);
+  }, 140);
+}
+
+function stopMusic() {
+  clearInterval(musicTimer);
+  musicTimer = null;
+}

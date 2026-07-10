@@ -12,7 +12,18 @@ python -m http.server 8000
 
 Then visit `http://localhost:8000`.
 
-Choose a difficulty and score as many hits as possible in two minutes. Hit the hourglass for slow motion and the explosion for a larger hammer. Sound begins after pressing Start because browsers require user interaction before audio can play.
+Choose a difficulty and score as many hits as possible in two minutes. Buddies can arrive randomly or in short sequences, doubles, triples, speed bursts, and harmless fake-outs.
+
+Successful bonks trigger a random lightweight reaction such as a shake, squish, dizzy stars, surprise flash, or pixel-particle burst. Rare **Golden Buddies** disappear faster but award 500 base points, so hit them quickly.
+
+Collect either of the two temporary hammer power-ups when they appear:
+
+- **Giant Hammer** makes the hammer larger and adds stronger hit particles.
+- **Golden Hammer** doubles points while active.
+
+The power-up bar shows the active effect and its remaining time. Sound begins after pressing Start because browsers require user interaction before audio can play.
 
 Use the **Quit** button during a match to return to the difficulty menu without waiting for the timer.
 Use **Pause** to freeze the timer, character spawning, power-ups, and music until you resume.
+
+Use a mouse, trackpad, or touchscreen to bonk a visible buddy. Each buddy can award points only once, even if it is clicked repeatedly.
