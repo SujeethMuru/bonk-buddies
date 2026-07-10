@@ -40,7 +40,8 @@ const GIANT_BUDDY_HIT_RADIUS = 40;
 const BUDDIES = [
   { id: 'charan', sprite: 'charan-clean.png', angrySprite: 'charan-angry.png' },
   { id: 'yesh', sprite: 'yesh-clean.png', angrySprite: 'yesh-angry.png' },
-  { id: 'kiran', sprite: 'kiran.png', angrySprite: 'kiran-angry.png' }
+  { id: 'kiran', sprite: 'kiran.png', angrySprite: 'kiran-angry.png' },
+  { id: 'vaibhav', sprite: 'vaibhav.png', angrySprite: 'vaibhav-angry.png' }
 ];
 
 BUDDIES.forEach(({ angrySprite }) => {
@@ -67,7 +68,7 @@ let hits = 0;
 let misses = 0;
 let combo = 0;
 let bestCombo = 0;
-let friendHits = { charan: 0, yesh: 0, kiran: 0 };
+let friendHits = { charan: 0, yesh: 0, kiran: 0, vaibhav: 0 };
 let timeLeft = GAME_CONFIG.duration;
 let clockTimer = null;
 let powerTimer = null;
@@ -200,7 +201,7 @@ function startGame() {
   misses = 0;
   combo = 0;
   bestCombo = 0;
-  friendHits = { charan: 0, yesh: 0, kiran: 0 };
+  friendHits = { charan: 0, yesh: 0, kiran: 0, vaibhav: 0 };
   lastSpecialPattern = '';
   pausedPower = null;
   timeLeft = selectedDuration;
@@ -612,6 +613,7 @@ function endGame() {
   $('#charanHits').textContent = friendHits.charan;
   $('#yeshHits').textContent = friendHits.yesh;
   $('#kiranHits').textContent = friendHits.kiran;
+  $('#vaibhavHits').textContent = friendHits.vaibhav;
   const durationScale = selectedDuration / GAME_CONFIG.duration;
   $('#rank').textContent = score > 12000 * durationScale
     ? 'LEGENDARY BONK LORD'

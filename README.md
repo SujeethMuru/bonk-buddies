@@ -12,7 +12,7 @@ python -m http.server 8000
 
 Then visit `http://localhost:8000`.
 
-Choose a difficulty and a 15-second, 30-second, 1-minute, or 2-minute match, then score as many hits as possible. Charan, Yesh, and Kiran can arrive randomly or in short sequences, doubles, triples, speed bursts, and harmless fake-outs.
+Choose a difficulty and a 15-second, 30-second, 1-minute, or 2-minute match, then score as many hits as possible. Charan, Yesh, Kiran, and Vaibhav can arrive randomly or in short sequences, doubles, triples, speed bursts, and harmless fake-outs.
 
 Successful bonks trigger a random lightweight reaction such as a shake, squish, dizzy stars, surprise flash, or pixel-particle burst. Rare **Golden Buddies** disappear faster but award 500 base points, so hit them quickly.
 
@@ -32,4 +32,4 @@ Use **Pause** to freeze the timer, character spawning, power-ups, and music unti
 
 Use a mouse, trackpad, or touchscreen to bonk a visible buddy. Each buddy can award points only once, even if it is clicked repeatedly.
 
-The final report includes total hits, accuracy, best combo, and separate bonk counts for Charan, Yesh, and Kiran.
+The final report includes total hits, accuracy, best combo, and separate bonk counts for Charan, Yesh, Kiran, and Vaibhav.
