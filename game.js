@@ -26,7 +26,7 @@ const GAME_CONFIG = {
   }
 };
 
-const HAMMER_IMPACT_DELAY = 70;
+const HAMMER_IMPACT_DELAY = 90;
 const BUDDY_HIT_RADIUS = 18;
 const GIANT_BUDDY_HIT_RADIUS = 40;
 
