@@ -26,7 +26,9 @@ const GAME_CONFIG = {
     pointerHitRadius: 44,
     giantPointerHitRadius: 78,
     giant: { label: 'GIANT HAMMER', icon: '🔨', duration: 9000 },
-    golden: { label: 'GOLDEN HAMMER', icon: '✨', duration: 9000, scoreMultiplier: 2 }
+    golden: { label: 'GOLDEN ×2', icon: '×2', duration: 9000, scoreMultiplier: 2 },
+    silver: { label: 'SILVER ×1.5', icon: '×1.5', duration: 8000, scoreMultiplier: 1.5 },
+    ruby: { label: 'RUBY ×3', icon: '×3', duration: 6500, scoreMultiplier: 3 }
   }
 };
 
@@ -57,6 +59,7 @@ const toast = $('#toast');
 const trackedTimeouts = new Set();
 
 let level = 'normal';
+let selectedDuration = GAME_CONFIG.duration;
 let running = false;
 let paused = false;
 let score = 0;
@@ -64,6 +67,7 @@ let hits = 0;
 let misses = 0;
 let combo = 0;
 let bestCombo = 0;
+let friendHits = { charan: 0, yesh: 0, kiran: 0 };
 let timeLeft = GAME_CONFIG.duration;
 let clockTimer = null;
 let powerTimer = null;
@@ -108,6 +112,15 @@ $$('[data-level]').forEach(button => {
     button.classList.add('selected');
     level = button.dataset.level;
     blip(520, 0.05);
+  });
+});
+
+$$('[data-duration]').forEach(button => {
+  button.addEventListener('click', () => {
+    $$('[data-duration]').forEach(option => option.classList.remove('selected'));
+    button.classList.add('selected');
+    selectedDuration = Number(button.dataset.duration);
+    blip(620, 0.04);
   });
 });
 
@@ -187,9 +200,10 @@ function startGame() {
   misses = 0;
   combo = 0;
   bestCombo = 0;
+  friendHits = { charan: 0, yesh: 0, kiran: 0 };
   lastSpecialPattern = '';
   pausedPower = null;
-  timeLeft = GAME_CONFIG.duration;
+  timeLeft = selectedDuration;
   paused = false;
   running = true;
   screens.game.classList.remove('mode-easy', 'mode-normal', 'mode-hard');
@@ -203,6 +217,7 @@ function startGame() {
   scheduleNextPattern(350);
   clockTimer = setInterval(tick, 100);
   powerTimer = setInterval(trySpawnPowerup, GAME_CONFIG.powerups.checkInterval);
+  scheduleTimeout(trySpawnPowerup, Math.min(5000, selectedDuration * 0.25));
   startMusic();
   showToast(`${level.toUpperCase()} MODE!`);
 }
@@ -353,13 +368,14 @@ function hitBuddy(hole) {
   hole.dataset.hit = '1';
   cancelTimeout(hole._timer);
   hits++;
+  friendHits[buddy.who]++;
   combo++;
   bestCombo = Math.max(bestCombo, combo);
 
   const comboMultiplier = 1 + Math.floor(combo / 5);
   const basePoints = buddy.isGolden ? GOLDEN_BUDDY_SCORE_VALUE : 100 * comboMultiplier;
-  const powerMultiplier = activePower?.id === 'golden'
-    ? GAME_CONFIG.powerups.golden.scoreMultiplier
+  const powerMultiplier = activePower
+    ? GAME_CONFIG.powerups[activePower.id].scoreMultiplier || 1
     : 1;
   const pointsAwarded = basePoints * powerMultiplier;
   score += pointsAwarded;
@@ -473,7 +489,8 @@ function updateHud() {
 
 function trySpawnPowerup() {
   if (!running || $('.powerup') || Math.random() > GAME_CONFIG.powerups.appearanceChance) return;
-  const powerId = Math.random() < 0.5 ? 'giant' : 'golden';
+  const roll = Math.random();
+  const powerId = roll < 0.35 ? 'giant' : roll < 0.65 ? 'golden' : roll < 0.88 ? 'silver' : 'ruby';
   const config = GAME_CONFIG.powerups[powerId];
   const collectible = document.createElement('button');
   collectible.className = `powerup powerup-${powerId}`;
@@ -592,7 +609,17 @@ function endGame() {
   $('#finalCombo').textContent = `x${bestCombo}`;
   const accuracy = hits + misses ? Math.round((hits / (hits + misses)) * 100) : 0;
   $('#finalAccuracy').textContent = `${accuracy}%`;
-  $('#rank').textContent = score > 12000 ? 'LEGENDARY BONK LORD' : score > 7000 ? 'HAMMER HERO' : score > 3500 ? 'BONK APPRENTICE' : 'ROOKIE BONKER';
+  $('#charanHits').textContent = friendHits.charan;
+  $('#yeshHits').textContent = friendHits.yesh;
+  $('#kiranHits').textContent = friendHits.kiran;
+  const durationScale = selectedDuration / GAME_CONFIG.duration;
+  $('#rank').textContent = score > 12000 * durationScale
+    ? 'LEGENDARY BONK LORD'
+    : score > 7000 * durationScale
+      ? 'HAMMER HERO'
+      : score > 3500 * durationScale
+        ? 'BONK APPRENTICE'
+        : 'ROOKIE BONKER';
   victorySound();
 }
 

@@ -39,6 +39,13 @@
           <button data-level="normal" class="selected"><span>SPICY</span><small>Gentler chaos</small></button>
           <button data-level="hard"><span>UNHINGED</span><small>Blink & miss</small></button>
         </div>
+        <p class="choose timer-heading">CHOOSE YOUR TIMER</p>
+        <div class="timer-select" role="group" aria-label="Game duration">
+          <button data-duration="15000">15 SEC</button>
+          <button data-duration="30000">30 SEC</button>
+          <button data-duration="60000">1 MIN</button>
+          <button data-duration="120000" class="selected">2 MIN</button>
+        </div>
         <button id="startBtn" class="start-btn">PRESS START <i>▶</i></button>
         <p class="how">WHACK BUDDIES • GRAB POWER-UPS • SCORE BIG</p>
       </div>
@@ -72,6 +79,9 @@
           <div><small>HITS</small><b id="finalHits">0</b></div>
           <div><small>BEST COMBO</small><b id="finalCombo">x0</b></div>
           <div><small>ACCURACY</small><b id="finalAccuracy">0%</b></div>
+          <div class="friend-stat"><small>CHARAN BONKS</small><b id="charanHits">0</b></div>
+          <div class="friend-stat"><small>YESH BONKS</small><b id="yeshHits">0</b></div>
+          <div class="friend-stat"><small>KIRAN BONKS</small><b id="kiranHits">0</b></div>
         </div>
         <p id="rank" class="rank">ROOKIE BONKER</p>
         <button id="againBtn" class="start-btn">BONK AGAIN <i>↻</i></button>
