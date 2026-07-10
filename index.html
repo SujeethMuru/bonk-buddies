@@ -29,9 +29,9 @@
         <h1>WHACK<br><span>A BUDDY</span></h1>
         <p class="subtitle">CHARAN & YESH EDITION</p>
         <div class="preview-duo">
-          <img class="keyed" src="assets/charan-key.png" alt="Pixel Charan" />
+          <img src="assets/charan.png" alt="Pixel Charan" />
           <div class="versus">VS</div>
-          <img class="keyed" src="assets/yesh-key.png" alt="Pixel Yesh" />
+          <img src="assets/yesh.png" alt="Pixel Yesh" />
         </div>
         <p class="choose">CHOOSE YOUR CHAOS</p>
         <div class="difficulty" role="group" aria-label="Difficulty">
@@ -50,13 +50,16 @@
         <span>POWER-UP</span>
         <div id="powerStatus" class="power-status">NONE</div>
       </div>
-      <button id="quitBtn" class="quit-btn">■ QUIT</button>
+      <div class="game-controls"><button id="pauseBtn" class="pause-btn">Ⅱ PAUSE</button><button id="quitBtn" class="quit-btn">■ QUIT</button></div>
       <div id="field" class="field" aria-label="Game field"></div>
       <div class="grass-front"></div>
       <div id="toast" class="toast"></div>
       <div id="hammer" class="hammer" aria-hidden="true"><div class="hammer-head"></div><div class="handle"></div></div>
       <div id="quitModal" class="quit-modal hidden" role="dialog" aria-modal="true" aria-labelledby="quitTitle">
         <div class="quit-card"><h2 id="quitTitle">QUIT GAME?</h2><p>Your score will be lost!</p><div><button id="keepPlaying">KEEP BONKING</button><button id="confirmQuit">QUIT</button></div></div>
+      </div>
+      <div id="pauseModal" class="quit-modal hidden" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
+        <div class="quit-card pause-card"><p class="eyebrow">★ GAME FROZEN ★</p><h2 id="pauseTitle">PAUSED</h2><p>Take a breather. The buddies are hiding!</p><button id="resumeBtn">▶ RESUME</button></div>
       </div>
     </section>
 

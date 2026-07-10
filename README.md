@@ -15,3 +15,4 @@ Then visit `http://localhost:8000`.
 Choose a difficulty and score as many hits as possible in two minutes. Hit the hourglass for slow motion and the explosion for a larger hammer. Sound begins after pressing Start because browsers require user interaction before audio can play.
 
 Use the **Quit** button during a match to return to the difficulty menu without waiting for the timer.
+Use **Pause** to freeze the timer, character spawning, power-ups, and music until you resume.

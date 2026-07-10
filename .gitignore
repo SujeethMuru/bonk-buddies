@@ -5,3 +5,6 @@ Yesh.png
 # Local tooling
 .DS_Store
 Thumbs.db
+
+# Local screenshots supplied for visual QA
+Player View/
