@@ -40,13 +40,13 @@ const BUDDIES = [
   { id: 'yesh', sprite: 'yesh-clean.png', angrySprite: 'yesh-angry.png' },
   { id: 'kiran', sprite: 'kiran.png', angrySprite: 'kiran-angry.png' },
   { id: 'vaibhav', sprite: 'vaibhav.png', angrySprite: 'vaibhav-angry.png' },
-  { id: 'anand', sprite: 'anand.png' },
-  { id: 'henry', sprite: 'henry.png' },
-  { id: 'hozaif', sprite: 'hozaif.png' },
-  { id: 'johannes', sprite: 'johannes.png' },
-  { id: 'leyneesh', sprite: 'leyneesh.png' },
-  { id: 'mukesh', sprite: 'mukesh.png' },
-  { id: 'rohan', sprite: 'rohan.png' }
+  { id: 'anand', sprite: 'anand.png', angrySprite: 'anand-angry.png' },
+  { id: 'henry', sprite: 'henry.png', angrySprite: 'henry-angry.png' },
+  { id: 'hozaif', sprite: 'hozaif.png', angrySprite: 'hozaif-angry.png' },
+  { id: 'johannes', sprite: 'johannes.png', angrySprite: 'johannes-angry.png' },
+  { id: 'leyneesh', sprite: 'leyneesh.png', angrySprite: 'leyneesh-angry.png' },
+  { id: 'mukesh', sprite: 'mukesh.png', angrySprite: 'mukesh-angry.png' },
+  { id: 'rohan', sprite: 'rohan.png', angrySprite: 'rohan-angry.png' }
 ];
 
 BUDDIES.forEach(({ sprite, angrySprite }) => {
