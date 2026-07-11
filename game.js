@@ -36,6 +36,15 @@ const GAME_CONFIG = {
 
 const BUDDY_HIT_RADIUS = 52;
 const GIANT_BUDDY_HIT_RADIUS = 88;
+const STORAGE_KEY = 'bonkBuddiesCareerV1';
+const HAMMER_KEY = 'bonkBuddiesHammerV1';
+const RANKS = [
+  { name: 'ROOKIE BONKER', scorePerMinute: 0 },
+  { name: 'BONK APPRENTICE', scorePerMinute: 4500 },
+  { name: 'HAMMER HERO', scorePerMinute: 9000 },
+  { name: 'LEGENDARY BONK LORD', scorePerMinute: 15000 }
+];
+const RANK_DIFFICULTY_SCALE = { easy: 0.9, normal: 1, hard: 1.15 };
 
 const BUDDIES = [
   { id: 'charan', sprite: 'charan-clean.png', angrySprite: 'charan-angry.png' },
@@ -55,9 +64,21 @@ const BUDDIES = [
   { id: 'sebastion', sprite: 'sebastion.png', angrySprite: 'sebastion-angry.png' }
 ];
 
+const ACHIEVEMENTS = [
+  { id: 'first_bonk', name: 'FIRST CONTACT', detail: 'Land your first bonk.', test: ({ career }) => career.totalHits >= 1 },
+  { id: 'combo_10', name: 'DOUBLE DIGITS', detail: 'Reach a 10-hit combo.', test: ({ career }) => career.bestCombo >= 10 },
+  { id: 'score_10000', name: 'SCORE CHASER', detail: 'Score 10,000 in one match.', test: ({ career }) => career.bestScore >= 10000 },
+  { id: 'gold_rush', name: 'GOLD RUSH', detail: 'Bonk 5 Golden Buddies.', test: ({ career }) => career.goldenHits >= 5 },
+  { id: 'sharpshooter', name: 'SHARPSHOOTER', detail: 'Finish with 90% accuracy and 20+ swings.', test: ({ match }) => match.swings >= 20 && match.accuracy >= 90 },
+  { id: 'full_roster', name: 'EVERYBODY GETS ONE', detail: 'Bonk every buddy in one match.', test: ({ match }) => BUDDIES.every(({ id }) => match.friendHits[id] > 0) },
+  { id: 'veteran', name: 'BONK VETERAN', detail: 'Complete 10 matches.', test: ({ career }) => career.gamesPlayed >= 10 }
+];
+
 BUDDIES.forEach(({ sprite, angrySprite }) => {
-  const image = new Image();
-  image.src = `assets/${angrySprite || sprite}`;
+  [sprite, angrySprite].filter(Boolean).forEach(source => {
+    const image = new Image();
+    image.src = `assets/${source}`;
+  });
 });
 
 const GOLDEN_BUDDY_SPAWN_CHANCE = GAME_CONFIG.goldenBuddy.spawnChance;
@@ -77,6 +98,10 @@ let paused = false;
 let score = 0;
 let hits = 0;
 let misses = 0;
+let escaped = 0;
+let swings = 0;
+let goldenHits = 0;
+let powerupsCollected = 0;
 let combo = 0;
 let bestCombo = 0;
 let friendHits = Object.fromEntries(BUDDIES.map(({ id }) => [id, 0]));
@@ -90,6 +115,32 @@ let audioCtx;
 let activePower = null;
 let pausedPower = null;
 let lastSpecialPattern = '';
+let selectedHammer = loadValue(HAMMER_KEY, 'classic');
+let career = loadCareer();
+
+function loadValue(key, fallback) {
+  try { return localStorage.getItem(key) || fallback; } catch { return fallback; }
+}
+
+function saveValue(key, value) {
+  try { localStorage.setItem(key, value); } catch { /* Storage may be disabled. */ }
+}
+
+function freshCareer() {
+  return { gamesPlayed: 0, totalScore: 0, totalHits: 0, totalMisses: 0, totalSwings: 0, totalEscaped: 0, bestScore: 0, bestCombo: 0, goldenHits: 0, powerupsCollected: 0, buddyHits: Object.fromEntries(BUDDIES.map(({ id }) => [id, 0])), achievements: [] };
+}
+
+function loadCareer() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    const defaults = freshCareer();
+    return saved ? { ...defaults, ...saved, buddyHits: { ...defaults.buddyHits, ...(saved.buddyHits || {}) }, achievements: Array.isArray(saved.achievements) ? saved.achievements : [] } : defaults;
+  } catch { return freshCareer(); }
+}
+
+function saveCareer() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(career)); } catch { /* Storage may be disabled. */ }
+}
 
 function worldTimeScale() {
   return activePower?.id === 'freeze' ? GAME_CONFIG.powerups.freeze.timeScale : 1;
@@ -144,6 +195,17 @@ $$('[data-duration]').forEach(button => {
   });
 });
 
+$$('[data-hammer]').forEach(button => {
+  button.classList.toggle('selected', button.dataset.hammer === selectedHammer);
+  button.addEventListener('click', () => {
+    selectedHammer = button.dataset.hammer;
+    $$('[data-hammer]').forEach(option => option.classList.toggle('selected', option === button));
+    applyHammerStyle();
+    saveValue(HAMMER_KEY, selectedHammer);
+    blip(720, 0.05);
+  });
+});
+
 $('#startBtn').addEventListener('click', startGame);
 $('#againBtn').addEventListener('click', startGame);
 $('#menuBtn').addEventListener('click', () => showScreen('menu'));
@@ -153,6 +215,15 @@ $('#resumeBtn').addEventListener('click', resumeGame);
 $('#keepPlaying').addEventListener('click', () => $('#quitModal').classList.add('hidden'));
 $('#confirmQuit').addEventListener('click', quitGame);
 $('#soundBtn').addEventListener('click', toggleSound);
+$('#resetStatsBtn').addEventListener('click', () => {
+  if (!window.confirm('Reset all Bonk Career statistics and achievements?')) return;
+  career = freshCareer();
+  saveCareer();
+  renderCareer();
+});
+
+applyHammerStyle();
+renderCareer();
 
 document.addEventListener('pointermove', event => {
   hammer.style.left = `${event.clientX}px`;
@@ -171,6 +242,7 @@ document.addEventListener('pointerdown', event => {
 
 function performHammerStrike(strikeX, strikeY) {
   if (!running) return;
+  swings++;
   const collectedPowerup = collectNearbyPowerup(strikeX, strikeY);
   const hitRadius = activePower?.id === 'giant' ? GIANT_BUDDY_HIT_RADIUS : BUDDY_HIT_RADIUS;
   const hole = findBuddyAtStrike(strikeX, strikeY, hitRadius);
@@ -189,7 +261,8 @@ function performHammerStrike(strikeX, strikeY) {
 function findBuddyAtStrike(strikeX, strikeY, hitRadius) {
   return $$('.hole.up').find(hole => {
     const buddy = hole.querySelector('.buddy');
-    return buddy && distanceToRect(strikeX, strikeY, buddy.getBoundingClientRect()) <= hitRadius;
+    const canReact = hole.dataset.hit === '0' || hole._buddy?.isFakeOut;
+    return buddy && canReact && distanceToRect(strikeX, strikeY, buddy.getBoundingClientRect()) <= hitRadius;
   });
 }
 
@@ -207,6 +280,7 @@ function showScreen(name) {
   Object.values(screens).forEach(screen => screen.classList.add('hidden'));
   screens[name].classList.remove('hidden');
   $('#hud').classList.toggle('hidden', name !== 'game');
+  if (name === 'menu') renderCareer();
 }
 
 function startGame() {
@@ -217,6 +291,10 @@ function startGame() {
   score = 0;
   hits = 0;
   misses = 0;
+  escaped = 0;
+  swings = 0;
+  goldenHits = 0;
+  powerupsCollected = 0;
   combo = 0;
   bestCombo = 0;
   friendHits = Object.fromEntries(BUDDIES.map(({ id }) => [id, 0]));
@@ -227,6 +305,7 @@ function startGame() {
   running = true;
   screens.game.classList.remove('mode-easy', 'mode-normal', 'mode-hard');
   screens.game.classList.add(`mode-${level}`);
+  applyHammerStyle();
   $('#pauseModal').classList.add('hidden');
   $('#quitModal').classList.add('hidden');
   $$('.hole').forEach(clearHole);
@@ -383,6 +462,7 @@ function hitBuddy(hole) {
   hole.classList.remove('teasing', 'retreating');
   hits++;
   friendHits[buddy.who]++;
+  if (buddy.isGolden) goldenHits++;
   combo++;
   bestCombo = Math.max(bestCombo, combo);
 
@@ -425,7 +505,7 @@ function beginRetreat(hole) {
 function finishRetreat(hole) {
   if (hole.dataset.hit === '0' && !hole._buddy?.isFakeOut) {
     combo = 0;
-    misses++;
+    escaped++;
     updateHud();
   }
   hole.classList.add('expired');
@@ -539,6 +619,7 @@ function collectPowerup(collectible) {
   const powerId = collectible.dataset.powerId;
   cancelTimeout(collectible._timer);
   collectible.remove();
+  powerupsCollected++;
   activatePowerup(powerId);
 }
 
@@ -682,23 +763,75 @@ function endGame() {
   $('#finalScore').textContent = String(score).padStart(4, '0');
   $('#finalHits').textContent = hits;
   $('#finalCombo').textContent = `x${bestCombo}`;
-  const accuracy = hits + misses ? Math.round((hits / (hits + misses)) * 100) : 0;
+  const accuracy = swings ? Math.round(((swings - misses) / swings) * 100) : 0;
   $('#finalAccuracy').textContent = `${accuracy}%`;
+  $('#finalEscaped').textContent = escaped;
+  $('#finalPowerups').textContent = powerupsCollected;
   $('#buddyStats').innerHTML = BUDDIES.map(({ id }) => `
     <div class="friend-stat">
       <small>${id.toUpperCase()} BONKS</small>
       <b>${friendHits[id]}</b>
     </div>
   `).join('');
-  const durationScale = selectedDuration / GAME_CONFIG.duration;
-  $('#rank').textContent = score > 12000 * durationScale
-    ? 'LEGENDARY BONK LORD'
-    : score > 7000 * durationScale
-      ? 'HAMMER HERO'
-      : score > 3500 * durationScale
-        ? 'BONK APPRENTICE'
-        : 'ROOKIE BONKER';
+  const rankResult = calculateRank(score);
+  $('#rank').textContent = rankResult.rank.name;
+  $('#rankTarget').textContent = rankResult.next
+    ? `${Math.max(0, rankResult.next.threshold - score).toLocaleString()} MORE POINTS TO ${rankResult.next.name}`
+    : 'MAXIMUM BONK STATUS ACHIEVED';
+  const unlocked = recordCareer({ accuracy });
+  renderUnlockedAchievements(unlocked);
   victorySound();
+}
+
+function calculateRank(matchScore) {
+  const minutes = selectedDuration / 60000;
+  const scale = RANK_DIFFICULTY_SCALE[level];
+  const ranked = RANKS.map(rank => ({ ...rank, threshold: Math.round(rank.scorePerMinute * minutes * scale) }));
+  let index = 0;
+  ranked.forEach((rank, rankIndex) => { if (matchScore >= rank.threshold) index = rankIndex; });
+  return { rank: ranked[index], next: ranked[index + 1] || null };
+}
+
+function recordCareer({ accuracy }) {
+  career.gamesPlayed++;
+  career.totalScore += score;
+  career.totalHits += hits;
+  career.totalMisses += misses;
+  career.totalSwings += swings;
+  career.totalEscaped += escaped;
+  career.bestScore = Math.max(career.bestScore, score);
+  career.bestCombo = Math.max(career.bestCombo, bestCombo);
+  career.goldenHits += goldenHits;
+  career.powerupsCollected += powerupsCollected;
+  BUDDIES.forEach(({ id }) => { career.buddyHits[id] += friendHits[id]; });
+  const match = { score, hits, misses, escaped, swings, accuracy, bestCombo, goldenHits, powerupsCollected, friendHits };
+  const unlocked = ACHIEVEMENTS.filter(achievement => !career.achievements.includes(achievement.id) && achievement.test({ career, match }));
+  career.achievements.push(...unlocked.map(({ id }) => id));
+  saveCareer();
+  return unlocked;
+}
+
+function renderUnlockedAchievements(unlocked) {
+  const panel = $('#unlockedAchievements');
+  panel.classList.toggle('hidden', !unlocked.length);
+  panel.innerHTML = unlocked.length ? `<small>NEW ACHIEVEMENTS</small>${unlocked.map(({ name }) => `<b>★ ${name}</b>`).join('')}` : '';
+}
+
+function renderCareer() {
+  const accuracy = career.totalSwings ? Math.round((career.totalSwings - career.totalMisses) / career.totalSwings * 100) : 0;
+  $('#careerStats').innerHTML = [
+    ['MATCHES', career.gamesPlayed], ['TOTAL SCORE', career.totalScore.toLocaleString()], ['BONKS', career.totalHits.toLocaleString()],
+    ['BEST SCORE', career.bestScore.toLocaleString()], ['BEST COMBO', `x${career.bestCombo}`], ['ACCURACY', `${accuracy}%`]
+  ].map(([label, value]) => `<div><small>${label}</small><b>${value}</b></div>`).join('');
+  $('#achievementList').innerHTML = ACHIEVEMENTS.map(achievement => {
+    const unlocked = career.achievements.includes(achievement.id);
+    return `<article class="achievement ${unlocked ? 'unlocked' : ''}"><i>${unlocked ? '★' : '◇'}</i><div><b>${achievement.name}</b><small>${achievement.detail}</small></div></article>`;
+  }).join('');
+}
+
+function applyHammerStyle() {
+  screens.game.dataset.hammer = selectedHammer;
+  hammer.dataset.hammer = selectedHammer;
 }
 
 function clearGameTimers() {
@@ -707,6 +840,7 @@ function clearGameTimers() {
   clearInterval(powerTimer);
   clockTimer = null;
   powerTimer = null;
+  $('.lightning-storm')?.remove();
   stopMusic();
 }
 

@@ -46,8 +46,19 @@
           <button data-duration="60000">1 MIN</button>
           <button data-duration="120000" class="selected">2 MIN</button>
         </div>
+        <p class="choose hammer-heading">CHOOSE YOUR HAMMER</p>
+        <div class="hammer-select" role="group" aria-label="Hammer style">
+          <button data-hammer="classic" class="selected"><i class="hammer-swatch classic"></i><span>CLASSIC</span><small>Arcade original</small></button>
+          <button data-hammer="neon"><i class="hammer-swatch neon"></i><span>NEON</span><small>Electric cyan</small></button>
+          <button data-hammer="royal"><i class="hammer-swatch royal"></i><span>ROYAL</span><small>Golden finish</small></button>
+        </div>
         <button id="startBtn" class="start-btn">PRESS START <i>▶</i></button>
         <p class="how">WHACK BUDDIES • GRAB POWER-UPS • SCORE BIG</p>
+        <section class="career-panel" aria-labelledby="careerTitle">
+          <div class="section-heading"><div><small>PLAYER PROFILE</small><h2 id="careerTitle">BONK CAREER</h2></div><button id="resetStatsBtn" class="reset-stats" type="button">RESET</button></div>
+          <div id="careerStats" class="career-stats"></div>
+          <div id="achievementList" class="achievement-list"></div>
+        </section>
       </div>
     </section>
 
@@ -79,9 +90,13 @@
           <div><small>HITS</small><b id="finalHits">0</b></div>
           <div><small>BEST COMBO</small><b id="finalCombo">x0</b></div>
           <div><small>ACCURACY</small><b id="finalAccuracy">0%</b></div>
+          <div><small>ESCAPED</small><b id="finalEscaped">0</b></div>
+          <div><small>POWER-UPS</small><b id="finalPowerups">0</b></div>
           <div id="buddyStats" class="buddy-stats"></div>
         </div>
         <p id="rank" class="rank">ROOKIE BONKER</p>
+        <p id="rankTarget" class="rank-target"></p>
+        <div id="unlockedAchievements" class="unlocked-achievements hidden"></div>
         <button id="againBtn" class="start-btn">BONK AGAIN <i>↻</i></button>
         <button id="menuBtn" class="text-btn">CHANGE DIFFICULTY</button>
       </div>
