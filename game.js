@@ -48,7 +48,11 @@ const BUDDIES = [
   { id: 'johannes', sprite: 'johannes.png', angrySprite: 'johannes-angry.png' },
   { id: 'leyneesh', sprite: 'leyneesh.png', angrySprite: 'leyneesh-angry.png' },
   { id: 'mukesh', sprite: 'mukesh.png', angrySprite: 'mukesh-angry.png' },
-  { id: 'rohan', sprite: 'rohan.png', angrySprite: 'rohan-angry.png' }
+  { id: 'rohan', sprite: 'rohan.png', angrySprite: 'rohan-angry.png' },
+  { id: 'aryan', sprite: 'aryan.png', angrySprite: 'aryan-angry.png' },
+  { id: 'philip', sprite: 'philip.png', angrySprite: 'philip-angry.png' },
+  { id: 'rashid', sprite: 'rashid.png', angrySprite: 'rashid-angry.png' },
+  { id: 'sebastion', sprite: 'sebastion.png', angrySprite: 'sebastion-angry.png' }
 ];
 
 BUDDIES.forEach(({ sprite, angrySprite }) => {
