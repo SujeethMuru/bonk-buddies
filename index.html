@@ -13,7 +13,7 @@
   <div class="scanlines"></div>
   <main class="cabinet">
     <header class="topbar">
-      <div class="brand"><span class="logo-hammer">🔨</span><span>BONK<br><b>BUDDIES!</b></span></div>
+      <div class="brand"><span class="brand-hammer" aria-hidden="true"><i class="emblem-hammer-head"></i><i class="emblem-hammer-handle"></i></span><span>BONK<br><b>BUDDIES!</b></span></div>
       <div class="hud hidden" id="hud">
         <div class="stat"><small>SCORE</small><strong id="score">0000</strong></div>
         <div class="stat timer-stat"><small>TIME</small><strong id="timer">02:00</strong></div>
@@ -30,7 +30,7 @@
         <p class="subtitle">DEDICATED TO CHARAN AND YESH FOR COPYING MY PROFILE</p>
         <div class="preview-duo">
           <img src="assets/charan.png" alt="Pixel Charan" />
-          <div class="versus">VS</div>
+          <div class="bonk-emblem" aria-label="Bonk crew emblem"><span class="emblem-hammer" aria-hidden="true"><i class="emblem-hammer-head"></i><i class="emblem-hammer-handle"></i></span><b>BONK!</b></div>
           <img src="assets/yesh.png" alt="Pixel Yesh" />
         </div>
         <p class="choose">CHOOSE YOUR CHAOS</p>
@@ -86,20 +86,26 @@
         <p class="eyebrow">★ TIME'S UP! ★</p>
         <h2>BONK<br>REPORT</h2>
         <div class="final-score"><small>FINAL SCORE</small><strong id="finalScore">0000</strong></div>
+        <p id="rank" class="rank">ROOKIE BONKER</p>
+        <p id="rankTarget" class="rank-target"></p>
         <div class="result-grid">
           <div><small>HITS</small><b id="finalHits">0</b></div>
           <div><small>BEST COMBO</small><b id="finalCombo">x0</b></div>
           <div><small>ACCURACY</small><b id="finalAccuracy">0%</b></div>
           <div><small>ESCAPED</small><b id="finalEscaped">0</b></div>
           <div><small>POWER-UPS</small><b id="finalPowerups">0</b></div>
-          <div id="buddyStats" class="buddy-stats"></div>
         </div>
-        <p id="rank" class="rank">ROOKIE BONKER</p>
-        <p id="rankTarget" class="rank-target"></p>
+        <section id="specialTitle" class="special-title" aria-live="polite"></section>
+        <div id="personalBestNotices" class="personal-best-notices hidden" aria-live="polite"></div>
+        <section id="mostBonkedBuddy" class="most-bonked-buddy" aria-labelledby="mostBonkedHeading"></section>
+        <section class="buddy-medals" aria-labelledby="buddyMedalsHeading">
+          <div class="results-section-heading"><small>MATCH BREAKDOWN</small><h3 id="buddyMedalsHeading">BUDDY MEDALS</h3></div>
+          <div id="buddyStats" class="buddy-stats"></div>
+        </section>
         <div id="unlockedAchievements" class="unlocked-achievements hidden"></div>
-        <button id="againBtn" class="start-btn">BONK AGAIN <i>↻</i></button>
-        <button id="menuBtn" class="text-btn">CHANGE DIFFICULTY</button>
+        <div class="result-actions"><button id="againBtn" class="start-btn">BONK AGAIN <i>↻</i></button><button id="menuBtn" class="text-btn">CHANGE DIFFICULTY</button></div>
       </div>
+      <div id="confettiLayer" class="confetti-layer" aria-hidden="true"></div>
     </section>
   </main>
   <script src="game.js"></script>

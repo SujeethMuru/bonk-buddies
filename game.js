@@ -45,6 +45,26 @@ const RANKS = [
   { name: 'LEGENDARY BONK LORD', scorePerMinute: 15000 }
 ];
 const RANK_DIFFICULTY_SCALE = { easy: 0.9, normal: 1, hard: 1.15 };
+const RESULTS_CONFIG = {
+  medals: {
+    bronze: { minimum: 5, label: 'BRONZE', icon: '●' },
+    silver: { minimum: 10, label: 'SILVER', icon: '◆' },
+    gold: { minimum: 20, label: 'GOLD', icon: '★' }
+  },
+  personalBests: { accuracyMinimumAttempts: 20 },
+  specialTitles: {
+    dominationMinimumHits: 12,
+    dominationMinimumShare: 0.35,
+    goldenHits: 4,
+    accuracy: 95,
+    accuracyMinimumAttempts: 30,
+    combo: 20,
+    totalHits: 60,
+    lowAccuracy: 35,
+    lowAccuracyMinimumAttempts: 15
+  },
+  confetti: { particleCount: 36, duration: 1050 }
+};
 
 const BUDDIES = [
   { id: 'charan', sprite: 'charan-clean.png', angrySprite: 'charan-angry.png' },
@@ -61,8 +81,31 @@ const BUDDIES = [
   { id: 'aryan', sprite: 'aryan.png', angrySprite: 'aryan-angry.png' },
   { id: 'philip', sprite: 'philip.png', angrySprite: 'philip-angry.png' },
   { id: 'rashid', sprite: 'rashid.png', angrySprite: 'rashid-angry.png' },
-  { id: 'sebastion', sprite: 'sebastion.png', angrySprite: 'sebastion-angry.png' }
+  { id: 'sebastion', sprite: 'sebastion.png', angrySprite: 'sebastion-angry.png' },
+  { id: 'adan', sprite: 'adan.png', angrySprite: 'adan-angry.png' },
+  { id: 'zain', sprite: 'zain.png', angrySprite: 'zain-angry.png' }
 ];
+
+const BUDDY_RESULTS_COPY = {
+  charan: { titles: ['CHARAN CRUSHER', "CHARAN'S NEMESIS", 'CERTIFIED CHARAN BONKER'], comments: ["I'm filing a complaint.", 'Was all of that really necessary?', 'You have a problem.'] },
+  yesh: { titles: ['YESH DESTROYER', "YESH'S WORST NIGHTMARE", 'CERTIFIED YESH BULLY'], comments: ['Bro... why me?', 'I thought we were friends.', 'You enjoyed that way too much.'] },
+  kiran: { titles: ['KIRAN WRECKER', "KIRAN'S BIGGEST HATER", 'KIRAN BONK MACHINE'], comments: ['Again?!', 'This feels personal.', "I'm never playing with you again."] },
+  vaibhav: { titles: ['VAIBHAV VANQUISHER', "VAIBHAV'S PROBLEM", 'CERTIFIED VAIBHAV MENACE'], comments: ['You could have bonked literally anyone else.', 'I demand a rematch.', 'That was targeted harassment.'] },
+  anand: { titles: ['ANAND ANNIHILATOR', "ANAND'S ARCHRIVAL", 'ANAND BONK SPECIALIST'], comments: ['I will remember this.', 'You chose violence.', 'Unbelievable.'] },
+  henry: { titles: ['HENRY HUNTER', "HENRY'S HR COMPLAINT", 'HENRY BONK MASTER'], comments: ['HR will be hearing about this.', 'This workplace is unsafe.', 'I need a helmet.'] },
+  hozaif: { titles: ['HOZAIF HAVOC', "HOZAIF'S HEADACHE", 'CERTIFIED HOZAIF BONKER'], comments: ['What did I even do?', 'That hammer has my name on it.', "I'm leaving."] },
+  johannes: { titles: ['JOHANNES OBLITERATOR', "JOHANNES' NEMESIS", 'JOHANNES BONK EXPERT'], comments: ['This friendship has consequences.', 'You are way too accurate.', 'I was barely on screen.'] },
+  leyneesh: { titles: ['LEYNEESH DESTROYER', "LEYNEESH'S WORST DAY", 'LEYNEESH BONK MACHINE'], comments: ['You were waiting for me, weren\'t you?', 'I saw that coming.', 'This is bullying.'] },
+  mukesh: { titles: ['MUKESH MENACE', 'MUKESH DESTROYER', "MUKESH'S ARCHRIVAL"], comments: ['I need better insurance.', 'You bonked me into retirement.', 'Never again.'] },
+  rohan: { titles: ['ROHAN RUINER', "ROHAN'S RIVAL", 'ROHAN BONK SPECIALIST'], comments: ['I want a recount.', 'That was completely unnecessary.', 'You have made an enemy today.'] },
+  aryan: { titles: ['ARYAN ANNIHILATOR', "ARYAN'S ARCHRIVAL", 'ARYAN BONK AUTHORITY'], comments: ['The suit did not protect me.', 'This was absolutely personal.', 'I need a safer profile picture.'] },
+  philip: { titles: ['PHILIP PUMMELER', "PHILIP'S PROBLEM", 'CERTIFIED PHILIP BONKER'], comments: ['My glasses saw every hit coming.', 'Can we discuss this calmly?', 'I would like one normal match.'] },
+  rashid: { titles: ['RASHID WRECKER', "RASHID'S RIVAL", 'RASHID BONK SPECIALIST'], comments: ['I was minding my business.', 'That was an unreasonable number of bonks.', 'We need to talk.'] },
+  sebastion: { titles: ['SEBASTION SMASHER', "SEBASTION'S NEMESIS", 'SEBASTION BONK MACHINE'], comments: ['The tie was not armor.', 'I expected better from you.', 'This friendship needs a cooldown.'] },
+  adan: { titles: ['ADAN ANNIHILATOR', "ADAN'S ADVERSARY", 'ADAN BONK BANDIT'], comments: ['My hair took most of the damage.', 'Was the hammer really necessary?', 'I am reconsidering this friendship.'] },
+  zain: { titles: ['ZAIN ZAPPER', "ZAIN'S NEMESIS", 'CERTIFIED ZAIN MENACE'], comments: ['The suit deserved better than this.', 'I came prepared for a meeting, not a bonking.', 'You have made this extremely personal.'] }
+};
+const DEFAULT_BUDDY_RESULTS_COPY = { titles: ['CERTIFIED BUDDY BONKER'], comments: ['I thought we were friends.'] };
 
 const ACHIEVEMENTS = [
   { id: 'first_bonk', name: 'FIRST CONTACT', detail: 'Land your first bonk.', test: ({ career }) => career.totalHits >= 1 },
@@ -127,14 +170,28 @@ function saveValue(key, value) {
 }
 
 function freshCareer() {
-  return { gamesPlayed: 0, totalScore: 0, totalHits: 0, totalMisses: 0, totalSwings: 0, totalEscaped: 0, bestScore: 0, bestCombo: 0, goldenHits: 0, powerupsCollected: 0, buddyHits: Object.fromEntries(BUDDIES.map(({ id }) => [id, 0])), achievements: [] };
+  return { gamesPlayed: 0, totalScore: 0, totalHits: 0, totalMisses: 0, totalSwings: 0, totalEscaped: 0, bestScore: 0, bestCombo: 0, goldenHits: 0, powerupsCollected: 0, buddyHits: Object.fromEntries(BUDDIES.map(({ id }) => [id, 0])), achievements: [], personalBests: { score: 0, combo: 0, accuracy: 0, hits: 0 } };
 }
 
 function loadCareer() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     const defaults = freshCareer();
-    return saved ? { ...defaults, ...saved, buddyHits: { ...defaults.buddyHits, ...(saved.buddyHits || {}) }, achievements: Array.isArray(saved.achievements) ? saved.achievements : [] } : defaults;
+    if (!saved || typeof saved !== 'object') return defaults;
+    const savedBests = saved.personalBests && typeof saved.personalBests === 'object' ? saved.personalBests : {};
+    return {
+      ...defaults,
+      ...saved,
+      buddyHits: { ...defaults.buddyHits, ...(saved.buddyHits || {}) },
+      achievements: Array.isArray(saved.achievements) ? saved.achievements : [],
+      personalBests: {
+        ...defaults.personalBests,
+        score: Number(savedBests.score ?? saved.bestScore) || 0,
+        combo: Number(savedBests.combo ?? saved.bestCombo) || 0,
+        accuracy: Number(savedBests.accuracy) || 0,
+        hits: Number(savedBests.hits) || 0
+      }
+    };
   } catch { return freshCareer(); }
 }
 
@@ -285,6 +342,7 @@ function showScreen(name) {
 
 function startGame() {
   initAudio();
+  clearPixelConfetti();
   clearGameTimers();
   clearActivePower();
   removePowerupCollectible();
@@ -759,28 +817,74 @@ function endGame() {
   clearActivePower();
   removePowerupCollectible();
   $$('.hole').forEach(clearHole);
+  const match = calculateMatchResults();
+  const personalBests = updatePersonalBests(match);
+  const unlocked = recordCareer(match);
   showScreen('results');
-  $('#finalScore').textContent = String(score).padStart(4, '0');
-  $('#finalHits').textContent = hits;
-  $('#finalCombo').textContent = `x${bestCombo}`;
-  const accuracy = swings ? Math.round(((swings - misses) / swings) * 100) : 0;
-  $('#finalAccuracy').textContent = `${accuracy}%`;
-  $('#finalEscaped').textContent = escaped;
-  $('#finalPowerups').textContent = powerupsCollected;
-  $('#buddyStats').innerHTML = BUDDIES.map(({ id }) => `
-    <div class="friend-stat">
-      <small>${id.toUpperCase()} BONKS</small>
-      <b>${friendHits[id]}</b>
-    </div>
-  `).join('');
-  const rankResult = calculateRank(score);
-  $('#rank').textContent = rankResult.rank.name;
-  $('#rankTarget').textContent = rankResult.next
-    ? `${Math.max(0, rankResult.next.threshold - score).toLocaleString()} MORE POINTS TO ${rankResult.next.name}`
-    : 'MAXIMUM BONK STATUS ACHIEVED';
-  const unlocked = recordCareer({ accuracy });
+  renderMatchSummary(match);
+  renderSpecialTitle(match.specialTitle);
+  renderPersonalBestNotices(personalBests);
+  renderMostBonkedBuddy(match.mostBonked, match.specialTitle);
+  renderBuddyStats(match.buddyResults);
   renderUnlockedAchievements(unlocked);
+  if (shouldLaunchConfetti(match, personalBests)) launchPixelConfetti();
   victorySound();
+}
+
+function calculateMatchResults() {
+  const accuracy = swings ? Math.max(0, Math.round(((swings - misses) / swings) * 100)) : 0;
+  const rankResult = calculateRank(score);
+  const buddyResults = BUDDIES.map(buddy => ({ ...buddy, hits: friendHits[buddy.id] || 0, medal: determineBuddyMedal(friendHits[buddy.id] || 0) }));
+  const mostBonked = determineMostBonkedBuddy(buddyResults, hits);
+  const match = { score, hits, misses, escaped, swings, accuracy, bestCombo, goldenHits, powerupsCollected, friendHits: { ...friendHits }, rankResult, buddyResults, mostBonked };
+  match.specialTitle = determineSpecialTitle(match);
+  return match;
+}
+
+function determineBuddyMedal(hitCount) {
+  for (const tier of ['gold', 'silver', 'bronze']) {
+    const medal = RESULTS_CONFIG.medals[tier];
+    if (hitCount >= medal.minimum) return { tier, ...medal };
+  }
+  return null;
+}
+
+function determineMostBonkedBuddy(buddyResults, totalHits) {
+  const highest = Math.max(0, ...buddyResults.map(buddy => buddy.hits));
+  if (highest === 0) return { type: 'empty', count: 0, leaders: [], share: 0 };
+  const leaders = buddyResults.filter(buddy => buddy.hits === highest);
+  if (leaders.length > 1) return { type: 'tie', count: highest, leaders, share: totalHits ? highest / totalHits : 0 };
+  const buddy = leaders[0];
+  const copy = BUDDY_RESULTS_COPY[buddy.id] || DEFAULT_BUDDY_RESULTS_COPY;
+  return { type: 'single', count: highest, leaders, buddy, share: totalHits ? highest / totalHits : 0, title: randomChoice(copy.titles), commentary: randomChoice(copy.comments) };
+}
+
+function determineSpecialTitle(match) {
+  const rules = RESULTS_CONFIG.specialTitles;
+  if (BUDDIES.every(({ id }) => match.friendHits[id] > 0)) return { title: 'EQUAL OPPORTUNITY BONKER', description: 'Bonked every buddy at least once.' };
+  if (match.mostBonked.type === 'single' && match.mostBonked.count >= rules.dominationMinimumHits && match.mostBonked.share >= rules.dominationMinimumShare) {
+    return { title: match.mostBonked.title, description: `${match.mostBonked.buddy.id.toUpperCase()} took ${Math.round(match.mostBonked.share * 100)}% of all bonks.` };
+  }
+  if (match.goldenHits >= rules.goldenHits) return { title: 'GOLDEN TOUCH', description: `Bonked ${match.goldenHits} Golden Buddies.` };
+  if (match.swings >= rules.accuracyMinimumAttempts && match.accuracy >= rules.accuracy) return { title: 'PIXEL SNIPER', description: `Finished with ${match.accuracy}% accuracy.` };
+  if (match.bestCombo >= rules.combo) return { title: 'COMBO KING', description: `Built a ${match.bestCombo}-bonk combo.` };
+  if (match.hits >= rules.totalHits) return { title: 'BONK MACHINE', description: `Landed ${match.hits} bonks in one match.` };
+  if (match.swings >= rules.lowAccuracyMinimumAttempts && match.accuracy <= rules.lowAccuracy) return { title: 'PROFESSIONAL AIR BONKER', description: `${match.accuracy}% accuracy. The air never stood a chance.` };
+  return { title: 'ROOKIE BONKER', description: 'Every bonk legend starts somewhere.' };
+}
+
+function updatePersonalBests(match) {
+  const bests = career.personalBests;
+  const records = [];
+  if (match.score > bests.score) records.push({ key: 'score', label: 'NEW HIGH SCORE!', value: match.score.toLocaleString() });
+  if (match.bestCombo > bests.combo) records.push({ key: 'combo', label: 'NEW BEST COMBO!', value: `x${match.bestCombo}` });
+  if (match.swings >= RESULTS_CONFIG.personalBests.accuracyMinimumAttempts && match.accuracy > bests.accuracy) records.push({ key: 'accuracy', label: 'NEW ACCURACY RECORD!', value: `${match.accuracy}%` });
+  if (match.hits > bests.hits) records.push({ key: 'hits', label: 'NEW MOST BONKS RECORD!', value: match.hits });
+  bests.score = Math.max(bests.score, match.score);
+  bests.combo = Math.max(bests.combo, match.bestCombo);
+  bests.hits = Math.max(bests.hits, match.hits);
+  if (match.swings >= RESULTS_CONFIG.personalBests.accuracyMinimumAttempts) bests.accuracy = Math.max(bests.accuracy, match.accuracy);
+  return records;
 }
 
 function calculateRank(matchScore) {
@@ -792,23 +896,100 @@ function calculateRank(matchScore) {
   return { rank: ranked[index], next: ranked[index + 1] || null };
 }
 
-function recordCareer({ accuracy }) {
+function recordCareer(match) {
   career.gamesPlayed++;
-  career.totalScore += score;
-  career.totalHits += hits;
-  career.totalMisses += misses;
-  career.totalSwings += swings;
-  career.totalEscaped += escaped;
-  career.bestScore = Math.max(career.bestScore, score);
-  career.bestCombo = Math.max(career.bestCombo, bestCombo);
-  career.goldenHits += goldenHits;
-  career.powerupsCollected += powerupsCollected;
-  BUDDIES.forEach(({ id }) => { career.buddyHits[id] += friendHits[id]; });
-  const match = { score, hits, misses, escaped, swings, accuracy, bestCombo, goldenHits, powerupsCollected, friendHits };
+  career.totalScore += match.score;
+  career.totalHits += match.hits;
+  career.totalMisses += match.misses;
+  career.totalSwings += match.swings;
+  career.totalEscaped += match.escaped;
+  career.bestScore = Math.max(career.bestScore, match.score);
+  career.bestCombo = Math.max(career.bestCombo, match.bestCombo);
+  career.goldenHits += match.goldenHits;
+  career.powerupsCollected += match.powerupsCollected;
+  BUDDIES.forEach(({ id }) => { career.buddyHits[id] += match.friendHits[id]; });
   const unlocked = ACHIEVEMENTS.filter(achievement => !career.achievements.includes(achievement.id) && achievement.test({ career, match }));
   career.achievements.push(...unlocked.map(({ id }) => id));
   saveCareer();
   return unlocked;
+}
+
+function renderMatchSummary(match) {
+  $('#finalScore').textContent = String(match.score).padStart(4, '0');
+  $('#finalHits').textContent = match.hits;
+  $('#finalCombo').textContent = `x${match.bestCombo}`;
+  $('#finalAccuracy').textContent = `${match.accuracy}%`;
+  $('#finalEscaped').textContent = match.escaped;
+  $('#finalPowerups').textContent = match.powerupsCollected;
+  $('#rank').textContent = match.rankResult.rank.name;
+  $('#rankTarget').textContent = match.rankResult.next
+    ? `${Math.max(0, match.rankResult.next.threshold - match.score).toLocaleString()} MORE POINTS TO ${match.rankResult.next.name}`
+    : 'MAXIMUM BONK STATUS ACHIEVED';
+}
+
+function renderSpecialTitle(specialTitle) {
+  $('#specialTitle').innerHTML = `<small>MATCH TITLE</small><h3>${specialTitle.title}</h3><p>${specialTitle.description}</p>`;
+}
+
+function renderPersonalBestNotices(records) {
+  const panel = $('#personalBestNotices');
+  panel.classList.toggle('hidden', !records.length);
+  panel.innerHTML = records.map(record => `<div><b>${record.label}</b><span>${record.value}</span></div>`).join('');
+}
+
+function renderMostBonkedBuddy(result, specialTitle) {
+  const panel = $('#mostBonkedBuddy');
+  if (result.type === 'empty') {
+    panel.innerHTML = '<div class="results-section-heading"><small>MATCH MVP</small><h3 id="mostBonkedHeading">NO BUDDY BONKED</h3></div><p class="mvp-empty">The buddies escaped completely untouched.</p>';
+    return;
+  }
+  if (result.type === 'tie') {
+    const visibleLeaders = result.leaders.slice(0, 4);
+    const extraLeaders = result.leaders.length - visibleLeaders.length;
+    const leaderNames = `${visibleLeaders.map(buddy => buddy.id.toUpperCase()).join(' • ')}${extraLeaders ? ` +${extraLeaders} MORE` : ''}`;
+    panel.innerHTML = `<div class="results-section-heading"><small>MATCH MVP</small><h3 id="mostBonkedHeading">TIED FOR MOST BONKED</h3></div><div class="mvp-tie-sprites">${visibleLeaders.map(buddy => `<img src="assets/${buddy.sprite}" alt="${buddy.id}">`).join('')}</div><b class="mvp-name">${leaderNames}</b><p>${result.count} BONKS EACH</p><q>They will be comparing notes.</q>`;
+    return;
+  }
+  const { buddy } = result;
+  const titleMarkup = specialTitle.title === result.title ? '' : `<span>${result.title}</span>`;
+  panel.innerHTML = `<div class="results-section-heading"><small>MATCH MVP</small><h3 id="mostBonkedHeading">MOST BONKED BUDDY</h3></div><div class="mvp-content"><img src="assets/${buddy.sprite}" alt="Pixel portrait of ${buddy.id}"><div><b class="mvp-name">${buddy.id.toUpperCase()}</b><strong>${result.count} BONKS</strong>${titleMarkup}<q>${result.commentary}</q></div></div>`;
+}
+
+function renderBuddyStats(buddyResults) {
+  $('#buddyStats').innerHTML = buddyResults.map(buddy => {
+    const medalClass = buddy.medal ? ` medal-${buddy.medal.tier}` : '';
+    const medalLabel = buddy.medal ? `<span class="medal-label"><i>${buddy.medal.icon}</i>${buddy.medal.label} MEDAL</span>` : '';
+    return `<article class="friend-stat${medalClass}"><img src="assets/${buddy.sprite}" alt=""><small>${buddy.id.toUpperCase()}</small><b>${buddy.hits} BONKS</b>${medalLabel}</article>`;
+  }).join('');
+}
+
+function shouldLaunchConfetti(match, records) {
+  const hasGoldMvp = match.mostBonked.leaders.some(buddy => buddy.medal?.tier === 'gold');
+  return records.some(record => record.key === 'score') || match.rankResult.rank.name === 'LEGENDARY BONK LORD' || hasGoldMvp || records.length > 1;
+}
+
+function launchPixelConfetti() {
+  clearPixelConfetti();
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  const layer = $('#confettiLayer');
+  const colors = ['#ffd43b', '#ff7a2d', '#e73f79', '#42d7cc', '#fff2c6'];
+  for (let index = 0; index < RESULTS_CONFIG.confetti.particleCount; index++) {
+    const particle = document.createElement('i');
+    particle.style.setProperty('--confetti-x', `${Math.random() * 100}%`);
+    particle.style.setProperty('--confetti-delay', `${Math.random() * 0.22}s`);
+    particle.style.setProperty('--confetti-drift', `${-55 + Math.random() * 110}px`);
+    particle.style.setProperty('--confetti-color', colors[index % colors.length]);
+    layer.appendChild(particle);
+  }
+  layer._timer = setTimeout(clearPixelConfetti, RESULTS_CONFIG.confetti.duration);
+}
+
+function clearPixelConfetti() {
+  const layer = $('#confettiLayer');
+  if (!layer) return;
+  clearTimeout(layer._timer);
+  layer._timer = null;
+  layer.innerHTML = '';
 }
 
 function renderUnlockedAchievements(unlocked) {
@@ -830,6 +1011,8 @@ function renderCareer() {
 }
 
 function applyHammerStyle() {
+  document.querySelector('.cabinet').dataset.hammer = selectedHammer;
+  screens.menu.dataset.hammer = selectedHammer;
   screens.game.dataset.hammer = selectedHammer;
   hammer.dataset.hammer = selectedHammer;
 }
